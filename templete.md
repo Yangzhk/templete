@@ -54,6 +54,8 @@
 - [多项式乘法 (ntt)](#多项式乘法-ntt)
 - [计算几何 2-D](#计算几何-2-d)
 - [三维点类](#三维点类)
+- [最大流](#最大流)
+- [zkw 费用流](#zkw-费用流)
 
 ### 模意义下运算类
 ```
@@ -1072,5 +1074,107 @@ Vec cross(Vec a, Vec b) {
 
 double norm(Vec a) {
     return sqrt(dot(a,a));
+}
+```
+
+### 最大流
+
+```
+inline bool bfs() {
+    fep(i, 1, n) cur[i] = head[i], d[i] = inf;
+    queue<int> q;
+    q.push(S);
+    d[S] = 0;
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        For(i, u) if (e[i].c && d[u] + 1 < d[e[i].v]) {
+            d[e[i].v] = d[u] + 1;
+            q.push(e[i].v);
+        }
+    }
+    return d[T] ^ inf;
+}
+
+inline int dfs(int u, int flow) {
+    if (u == T || !flow) return flow;
+    int Sum = 0;
+    for (int &i = cur[u]; i; i = e[i].nxt) {
+        if (e[i].c && d[u] + 1 == d[e[i].v]) {
+            int f = dfs(e[i].v, min(flow - Sum, e[i].c));
+            e[i].c -= f;
+            e[i ^ 1].c += f;
+            Sum += f;
+            if (Sum == flow) return Sum;
+        }
+    }
+    return Sum;
+}
+
+inline int dinic() {
+    int maxflow = 0;
+    while (bfs()) maxflow += dfs(S, inf);
+    return maxflow;
+}
+```
+
+### zkw 费用流
+
+```
+inline bool spfa() {
+	for (re int i = 1; i <= n; ++i) vis[i] = false, deep[i] = INF;
+	deque<int> q;
+	q.push_back(t);
+	vis[t] = true;
+	deep[t] = 0;
+	while (!q.empty()) {
+		int u = q.front();
+		q.pop_front();
+		vis[u] = false;
+		for (re int i = head[u]; i; i = e[i].nxt) {
+			if (e[i ^ 1].c && deep[u] + e[i ^ 1].w < deep[e[i].v])
+			{
+				deep[e[i].v] = deep[u] + e[i ^ 1].w;
+				if (!vis[e[i].v]) {
+					vis[e[i].v] = true;
+					if (!q.empty() && deep[e[i].v] < deep[q.front()])
+						q.push_front(e[i].v);
+					else
+						q.push_back(e[i].v);
+				}
+			}
+		}
+	}
+	return deep[s] != INF;
+}
+
+inline int dfs(int u, int flow) {
+	int sum = 0;
+	vis[u] = true;
+	if (u == t || !flow) return flow;
+	for (re int i = head[u]; i; i = e[i].nxt) {
+		if (!vis[e[i].v] && e[i].c && deep[u] - e[i].w == deep[e[i].v]) {
+			int res = dfs(e[i].v, min(flow, e[i].c));
+			e[i].c -= res;
+			e[i ^ 1].c += res;
+			sum += res;
+			flow -= res;
+			mincost += res * e[i].w;
+			if (!flow) break;
+		}
+	}
+	return sum;
+}
+
+inline int zkw() {
+	int flow = 0;
+	while (spfa()) {
+		vis[t] = true;
+		while (vis[t]) {
+			for (re int i = 1; i <= n; ++i) vis[i] = false;
+			flow += dfs(s, INF);
+		}
+	}
+	return flow;
 }
 ```
