@@ -52,10 +52,10 @@
 - [exgcd 求 线性同余方程](#exgcd-求-线性同余方程)
 - [字符串哈希](#字符串哈希)
 - [多项式乘法 (ntt)](#多项式乘法-ntt)
-- [计算几何 2-D](#计算几何-2-d)
 - [三维点类](#三维点类)
 - [最大流](#最大流)
 - [zkw 费用流](#zkw-费用流)
+- [计算几何 (dls version)](#计算几何-dls-version)
 
 ### 模意义下运算类
 ```
@@ -790,7 +790,9 @@ std::map<std::pair<ull, ull>, int> hash_map;//用 map 存双哈希值
 ```
 
 ### 多项式乘法 (ntt)
+
 ```
+
 constexpr int N = 4e6 + 10;
 constexpr int mod = 998244353;
 
@@ -798,242 +800,40 @@ int n, m;
 int F[N], G[N], rev[N];
 
 int Pow(int a, int k){
-	int res = 1;
-	for(; k; a = 1ll * a * a % mod, k >>= 1){
-		if(k & 1) res = 1ll * res * a % mod;
-	}
-	return res;
+    int res = 1;
+    for(; k; a = 1ll * a * a % mod, k >>= 1){
+        if(k & 1) res = 1ll * res * a % mod;
+    }
+    return res;
 }
 
 void NTT(int len, int *F, bool type){
-	for(int i = 0; i < len; i++) if(i < rev[i]) swap(F[i], F[rev[i]]);
-	for(int k = 1; k < len; k <<= 1){
-		int eps = Pow(type ? 3 : 332748118, (mod - 1) / (k << 1));
-		for(int i = 0; i < len; i += (k << 1)) {
-			for(int j = i, g = 1; j < i + k; j++, g = 1ll * g * eps % mod) {
-				int tmp1 = F[j], tmp2 = 1ll * g * F[j + k] % mod;
-				F[j] = tmp1 + tmp2 >= mod ? tmp1 + tmp2 - mod : tmp1 + tmp2;
-				F[j + k] = tmp1 - tmp2 < 0 ? tmp1 - tmp2 + mod : tmp1 - tmp2;
-			}
-		}
-	}
+    for(int i = 0; i < len; i++) if(i < rev[i]) swap(F[i], F[rev[i]]);
+    for(int k = 1; k < len; k <<= 1){
+        int eps = Pow(type ? 3 : 332748118, (mod - 1) / (k << 1));
+        for(int i = 0; i < len; i += (k << 1)) {
+            for(int j = i, g = 1; j < i + k; j++, g = 1ll * g * eps % mod) {
+                int tmp1 = F[j], tmp2 = 1ll * g * F[j + k] % mod;
+                F[j] = tmp1 + tmp2 >= mod ? tmp1 + tmp2 - mod : tmp1 + tmp2;
+                F[j + k] = tmp1 - tmp2 < 0 ? tmp1 - tmp2 + mod : tmp1 - tmp2;
+            }
+        }
+    }
 }
 
 void polymul(int *F, int *G){
-	int len, ln;
-	for(len = 1, ln = 0; len <= 2 * (n-1); len <<= 1, ln++);
-	for(int i = 0; i < len; i++) rev[i] = (rev[i >> 1] >> 1) + (i & 1) * (1 << ln - 1);
+    int len, ln;
+    for(len = 1, ln = 0; len <= 2 * (n-1); len <<= 1, ln++);
+    for(int i = 0; i < len; i++) rev[i] = (rev[i >> 1] >> 1) + (i & 1) * (1 << ln - 1);
 
-	NTT(len, F, true), NTT(len, G, true);
-	rep(i, 0, len - 1) F[i] = 1ll * F[i] * G[i] % mod;
-	NTT(len, F, false);
+    NTT(len, F, true), NTT(len, G, true);
+    rep(i, 0, len - 1) F[i] = 1ll * F[i] * G[i] % mod;
+    NTT(len, F, false);
 
-	int Inv = Pow(len, mod - 2);
-	rep(i, 0, len - 1) F[i] = 1ll * F[i] * Inv % mod;
-}
-```
-
-### 计算几何 2-D
-
-```
-/*
-2-D Point / Segment
-*/
-
-// 符号判断：0表示相等，1表示正，-1表示负
-constexpr double eps = 1e-9;
-int dcmp(double x) {
-    if (fabs(x) < eps) return 0;
-    return x < 0 ? -1 : 1;
+    int Inv = Pow(len, mod - 2);
+    rep(i, 0, len - 1) F[i] = 1ll * F[i] * Inv % mod;
 }
 
-struct Point { // 如果输入的是 int 类型, 就改成 int, 包括 cross, dot 也改
-    double x, y;
-    Point(double x = 0, double y = 0) : x(x), y(y) {}
-};
-
-typedef Point Vector;
-
-Vector operator + (Vector A, Vector B) { return Vector(A.x + B.x, A.y + B.y); }
-Vector operator - (Point A, Point B) { return Vector(A.x - B.x, A.y - B.y); }
-Vector operator * (Vector A, double p) { return Vector(A.x * p, A.y * p); }
-bool operator == (Point a, Point b) { return dcmp(a.x - b.x) == 0 && dcmp(a.y - b.y) == 0; }
-
-// 叉积运算
-double cross(Point a, Point b) {
-    return a.x * b.y - a.y * b.x;
-}
-
-// 计算向量 ab 和 ac 的位置关系
-double cross(Point a, Point b, Point c) {
-    return cross(b - a, c - a);
-}
-
-// 基础点积：两个从原点出发的向量
-double dot(Point a, Point b) {
-    return a.x * b.x + a.y * b.y;
-}
-
-// 向量内角点积：计算向量 AB 和 AC 的点积
-double dot(Point a, Point b, Point c) {
-    return dot(b - a, c - a);
-}
-
-// 长度与距离
-double Length(Vector A) { 
-    return sqrt(dot(A, A)); 
-}
-double Distance(Point A, Point B) {
-    return Length(A - B); 
-}
-
-// 向量夹角 (弧度)
-double Angle(Point a, Point b) {
-    return acos(dot(a, b) / Length(a) / Length(b));
-}
-
-double dist_to_line(Point p, Point a, Point b) {
-    Point v1 = b - a, v2 = p - a;
-    return abs(cross(v1, v2)) / Length(v1);
-}
-
-// 投影点：点 p 在直线 ab 上的投影点
-Point GetLineProjection(Point p, Point a, Point b) { // ab 不能是零向量
-    if (dcmp(dot(v, v)) == 0) return a; // 或直接返回 a
-    Point v = b - a;
-    return a + v * (dot(v, p - a) / dot(v, v));
-}
-
-double DistToSegment(Point p, Point a, Point b) {
-    if (a == b) return Length(p - a);
-    Point v1 = b - a, v2 = p - a, v3 = p - b;
-    if (dot(v1, v2) < 0) return Length(v2); // 投影在 a 左侧
-    if (dot(v1, v3) > 0) return Length(v3); // 投影在 b 右侧
-    // 投影在线段内，使用叉积求面积/底边长
-    return abs(cross(v1, v2)) / Length(v1);
-}
-
-bool OnSegment(Point p, Point a, Point b) {
-    // 叉积为 0 保证共线，点积 <= 0 保证 p 在 a, b 之间
-    return dcmp(cross(a - p, b - p)) == 0 &&
-       dcmp(dot(a - p, b - p)) <= 0;
-}
-
-struct Line {
-    Point p;   // 直线上的一点（起点）
-    Vector v;  // 方向向量（从 p 指向直线另一个点的向量）
-    double angle; // 极角，用于半平面交排序
-
-    Line() {}
-    // 通过两个点定义直线：p1 为起点，p2-p1 为方向向量
-    Line(Point p1, Point p2) : p(p1), v(p2 - p1) {
-        angle = atan2(v.y, v.x);
-    }
-};
-
-// 辅助定义：线段（Segment）
-// 在竞赛中，线段通常直接复用 Line 类，但在逻辑上只取 t 在 [0, 1] 之间的部分
-typedef Line Segment;
-
-bool isParallel(Point a, Point b, Point c, Point d) {
-    return dcmp(cross(b - a, d - c)) == 0;
-}
-
-// 直线 P1P2 和 Q1Q2 的交点 (前提是已确认不平行)
-Point get_line_intersection(Point p1, Point p2, Point q1, Point q2) {
-    double a1 = cross(q2 - q1, p1 - q1);
-    double a2 = cross(q2 - q1, p2 - q1);
-    // 利用面积比例关系 (叉积即平行四边形面积)
-    return { (p1.x * a2 - p2.x * a1) / (a2 - a1), (p1.y * a2 - p2.y * a1) / (a2 - a1) };
-}
-
-// 判断线段是否相交（跨立实验）
-bool is_segment_intersection(Point a, Point b, Point c, Point d) {
-    // 检查两条线段是否互相跨立
-    return max(a.x, b.x) >= min(c.x, d.x) && max(c.x, d.x) >= min(a.x, b.x) &&
-           max(a.y, b.y) >= min(c.y, d.y) && max(c.y, d.y) >= min(a.y, b.y) &&
-           dcmp(cross(a, b, c)) * dcmp(cross(a, b, d)) <= 0 && 
-           dcmp(cross(c, d, a)) * dcmp(cross(c, d, b)) <= 0;
-}
-
-/*
-凸多边形
-*/
-
-vector<Point> get_convex_hull(vector<Point>& p) {
-    int n = p.size();
-    if (n <= 2) return p;
-    sort(p.begin(), p.end(), [](Point a, Point b) {
-        return a.x < b.x || (a.x == b.x && a.y < b.y);
-    });
-
-    vector<Point> hull;
-    // 求下凸壳
-    for (int i = 0; i < n; ++i) {
-        while (hull.size() > 1 && cross(hull[hull.size() - 2], hull.back(), p[i]) <= 0) {
-            hull.pop_back();
-        }
-        hull.push_back(p[i]);
-    }
-    // 求上凸壳
-    int lower_size = hull.size();
-    for (int i = n - 2; i >= 0; --i) {
-        while (hull.size() > lower_size && cross(hull[hull.size() - 2], hull.back(), p[i]) <= 0) {
-            hull.pop_back();
-        }
-        hull.push_back(p[i]);
-    }
-    hull.pop_back(); // 起点被重复添加了两次
-    return hull;
-}
-
-double get_area(const vector<Point>& hull) {
-    double area = 0;
-    int n = hull.size();
-    for (int i = 0; i < n; ++i) {
-        area += cross(hull[i], hull[(i + 1) % n]);
-    }
-    return abs(area) / 2.0;
-}
-
-double ConvexDiameter(const vector<Point>& hull) { // 旋转卡尺
-    int n = hull.size();
-    if (n <= 1) return 0;
-    if (n == 2) return Length(hull[0] - hull[1]);
-    
-    double max_d = 0;
-    for (int i = 0, j = 1; i < n; i++) {
-        // 旋转寻找距离边 i -> i+1 最远的顶点 j
-        // 比较的是三角形面积（叉积）
-        while (abs(cross(hull[i], hull[(i + 1) % n], hull[(j + 1) % n])) > 
-               abs(cross(hull[i], hull[(i + 1) % n], hull[j]))) {
-            j = (j + 1) % n;
-        }
-        max_d = max({max_d, Length(hull[i] - hull[j]), Length(hull[(i + 1) % n] - hull[j])});
-    }
-    return max_d;
-}
-
-// 0: 外部, 1: 内部, 2: 边界上
-int IsPointInPolygon(Point p, const vector<Point>& poly) {
-    bool wn = false;
-    int n = poly.size();
-    for (int i = 0; i < n; i++) {
-        Point s1 = poly[i], s2 = poly[(i + 1) % n];
-
-        // 1. 首先判断点是否在边上 (使用你板子里的 OnSegment)
-        if (OnSegment(p, s1, s2)) return 2;
-
-        // 2. 射线法核心：判断射线与边的相交
-        // 这里的逻辑处理了水平边和端点重合的特殊情况
-        if (((dcmp(s1.y - p.y) <= 0 && dcmp(p.y - s2.y) < 0) || 
-             (dcmp(s2.y - p.y) <= 0 && dcmp(p.y - s1.y) < 0)) &&
-            (dcmp(p.x - (s2.x - s1.x) * (p.y - s1.y) / (s2.y - s1.y) - s1.x) < 0)) {
-            wn = !wn;
-        }
-    }
-    return wn ? 1 : 0;
-}
 ```
 
 ### 三维点类
@@ -1116,65 +916,285 @@ inline int dinic() {
     while (bfs()) maxflow += dfs(S, inf);
     return maxflow;
 }
+
 ```
 
 ### zkw 费用流
 
 ```
+
 inline bool spfa() {
-	for (re int i = 1; i <= n; ++i) vis[i] = false, deep[i] = INF;
-	deque<int> q;
-	q.push_back(t);
-	vis[t] = true;
-	deep[t] = 0;
-	while (!q.empty()) {
-		int u = q.front();
-		q.pop_front();
-		vis[u] = false;
-		for (re int i = head[u]; i; i = e[i].nxt) {
-			if (e[i ^ 1].c && deep[u] + e[i ^ 1].w < deep[e[i].v])
-			{
-				deep[e[i].v] = deep[u] + e[i ^ 1].w;
-				if (!vis[e[i].v]) {
-					vis[e[i].v] = true;
-					if (!q.empty() && deep[e[i].v] < deep[q.front()])
-						q.push_front(e[i].v);
-					else
-						q.push_back(e[i].v);
-				}
-			}
-		}
-	}
-	return deep[s] != INF;
+    for (re int i = 1; i <= n; ++i) vis[i] = false, deep[i] = INF;
+    deque<int> q;
+    q.push_back(t);
+    vis[t] = true;
+    deep[t] = 0;
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop_front();
+        vis[u] = false;
+        for (re int i = head[u]; i; i = e[i].nxt) {
+            if (e[i ^ 1].c && deep[u] + e[i ^ 1].w < deep[e[i].v])
+            {
+                deep[e[i].v] = deep[u] + e[i ^ 1].w;
+                if (!vis[e[i].v]) {
+                    vis[e[i].v] = true;
+                    if (!q.empty() && deep[e[i].v] < deep[q.front()])
+                        q.push_front(e[i].v);
+                    else
+                        q.push_back(e[i].v);
+                }
+            }
+        }
+    }
+    return deep[s] != INF;
 }
 
 inline int dfs(int u, int flow) {
-	int sum = 0;
-	vis[u] = true;
-	if (u == t || !flow) return flow;
-	for (re int i = head[u]; i; i = e[i].nxt) {
-		if (!vis[e[i].v] && e[i].c && deep[u] - e[i].w == deep[e[i].v]) {
-			int res = dfs(e[i].v, min(flow, e[i].c));
-			e[i].c -= res;
-			e[i ^ 1].c += res;
-			sum += res;
-			flow -= res;
-			mincost += res * e[i].w;
-			if (!flow) break;
-		}
-	}
-	return sum;
+    int sum = 0;
+    vis[u] = true;
+    if (u == t || !flow) return flow;
+    for (re int i = head[u]; i; i = e[i].nxt) {
+        if (!vis[e[i].v] && e[i].c && deep[u] - e[i].w == deep[e[i].v]) {
+            int res = dfs(e[i].v, min(flow, e[i].c));
+            e[i].c -= res;
+            e[i ^ 1].c += res;
+            sum += res;
+            flow -= res;
+            mincost += res * e[i].w;
+            if (!flow) break;
+        }
+    }
+    return sum;
 }
 
 inline int zkw() {
-	int flow = 0;
-	while (spfa()) {
-		vis[t] = true;
-		while (vis[t]) {
-			for (re int i = 1; i <= n; ++i) vis[i] = false;
-			flow += dfs(s, INF);
-		}
-	}
-	return flow;
+    int flow = 0;
+    while (spfa()) {
+        vis[t] = true;
+        while (vis[t]) {
+            for (re int i = 1; i <= n; ++i) vis[i] = false;
+            flow += dfs(s, INF);
+        }
+    }
+    return flow;
+}
+```
+
+### 计算几何 (dls version)
+
+```
+#include <bits/stdc++.h>
+
+#define rep(i, a, b) for(int i = a; i <= b; i++)
+#define db double
+
+using namespace std;
+
+const db EPS = 1e-9;
+
+inline int sign(db a) { return a < -EPS ? -1 : a > EPS; }
+
+inline int cmp(db a, db b) { return sign(a - b); }
+
+struct P {
+    db x, y;
+
+    P() {}
+    P(db _x, db _y) : x(_x), y(_y) {}
+    
+    P operator + (P p) { return {x + p.x, y + p.y}; }
+    P operator - (P p) { return {x - p.x, y - p.y}; }
+    P operator * (db d) { return {x * d, y * d}; }
+    P operator / (db d) { return {x / d, y / d}; }
+
+    bool operator < (P p) const {
+        int c = cmp(x, p.x);
+        if(c) return c == -1;
+        return cmp(y, p.y) == -1;
+    }
+
+    /*极角排序
+    bool operator < (P p) const {
+        if(quad() != b.quad()) return quad() < p.quad();
+        return sign(det(p)) == -1;
+    } 
+    */
+
+    bool operator == (P o) const {
+        return cmp(x, o.x) == 0 && cmp(y, o.y) == 0;
+    }
+
+    db distTo(P p) { return (*this - p).abs(); }
+    db alpha() { return atan2(y, x); }
+    void read() { cin >> x >> y; }
+    void write() { cout << "(" << x << "," << y << ")" << "\n"; }
+    db abs() { return sqrt(abs2()); }
+    db abs2() { return x * x + y * y; }
+    P rot90() { return P(-y, x); }
+    P unit() { return *this / abs(); }
+    int quad() const { return sign(y) == 1 || (sign(y) == 0 && sign(x) >= 0); }
+
+    db dot(P p) { return x * p.x + y * p.y; }
+    db det(P p) { return x * p.y - y * p.x; }
+
+    P rot(db an) { return {x * cos(an) - y * sin(an), x * sin(an) + y * cos(an)}; }
+
+};
+
+db cross(P p1, P p2, P p3) { return ((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)); }
+db crossOp(P p1, P p2, P p3) { return sign(cross(p1, p2, p3)); }
+
+bool chkLL(P p1, P p2, P q1, P q2) {//直线平行
+    db a1 = cross(q1, q2, p1), a2 = -cross(q1, q2, p2);
+    return sign(a1 + a2) != 0;
+}
+
+P isLL(P p1, P p2, P q1, P q2) { // 直线交点
+    db a1 = cross(q1, q2, p1), a2 = -cross(q1, q2, p2);
+    return (p1 * a2 + p2 * a1) / (a1 + a2);
+}
+
+bool intersect(db l1, db r1, db l2, db r2) { // 跨立实验
+    if(l1 > r1) swap(l1, r1); if(l2 > r2) swap(l2, r2);
+    return !( cmp(r1, l2) == -1 || cmp(r2, l1) == -1 );
+}
+
+bool isSS(P p1, P p2, P q1, P q2) { // 线段相交
+    return intersect(p1.x, p2.x, q1.x, q2.x) && intersect(p1.y, p2.y, q1.y, q2.y) &&
+    crossOp(p1, p2, q1) * crossOp(p1, p2, q2) <= 0 && crossOp(q1, q2, p1)
+            * crossOp(q1, q2, p2) <= 0;
+}
+
+bool isSS_strict(P p1, P p2, P q1, P q2) { // 是否严格相交
+    return crossOp(p1, p2, q1) * crossOp(p1, p2, q2) < 0 && crossOp(q1, q2, p1)
+            * crossOp(q1, q2, p2) < 0;
+}
+
+bool isMiddle(db a, db m, db b) {
+    return sign(a - m) == 0 || sign(b - m) == 0 || (a < m != b < m);
+}
+
+bool isMiddle(P a, P m, P b) {
+    return isMiddle(a.x, m.x, b.x) && isMiddle(a.y, m.y, b.y);
+}
+
+bool onSeg(P p1, P p2, P q) { // 点在线段上
+    return crossOp(p1, p2, q) == 0 && isMiddle(p1, q, p2);
+}
+
+bool onSeg_strict(P p1, P p2, P q) {
+    return crossOp(p1, p2, q) == 0 && sign((q - p1).dot(p1 - p2) * sign((q - p2).dot(p1 - p2)) < 0);
+}
+
+P proj(P p1, P p2, P q) { // 投影
+    P dir = p2 - p1;
+    return p1 + dir * (dir.dot(q - p1) / dir.abs2());
+}
+
+P reflect(P p1, P p2, P q) { // 对称点 
+    return proj(p1, p2, q) * 2 - q;
+}
+
+db nearest(P p1, P p2, P q) { // 点到线段的最短距离
+    P h = proj(p1, p2, q);
+    if(isMiddle(p1, h, p2))
+        return q.distTo(h);
+    return min(p1.distTo(q), p2.distTo(q));
+}
+
+db disSS(P p1, P p2, P q1, P q2) { // 线段到线段的最短距离
+    if(isSS(p1, p2, q1, q2)) return 0;
+    return min(min(nearest(p1, p2, q1), nearest(p1, p2, q2)), min(nearest(q1, q2, p1), nearest(q1, q2, p2)));
+}
+
+db rad(P p1, P p2) { // 向量夹角
+    return atan2l(p1.det(p2), p1.dot(p2));
+}
+
+db area(vector<P> ps) { // 多边形面积
+    db ret = 0; rep(i, 0, ps.size() - 1) ret += ps[i].det(ps[(i + 1) % ps.size()]);
+
+    return ret / 2;
+}
+
+int contain(vector<P> ps, P p) { // 2: inside, 1: on_seg, 0: outside
+    int n = ps.size(), ret = 0;
+    rep(i, 0, n-1) {
+        P u = ps[i], v = ps[(i + 1) % n];
+        if(onSeg(u, v, p)) return 1;
+        if(cmp(u.y, v.y) <= 0) swap(u, v);
+        if(cmp(p.y, u.y) > 0 || cmp(p.y, v.y) <= 0) continue;
+        ret ^= crossOp(p, u, v) > 0;
+    }
+    return ret * 2;
+}
+
+vector<P> convexHull(vector<P> ps) {
+    int n = ps.size(); if(n <= 1) return ps;
+    sort(ps.begin(), ps.end());
+    vector<P> qs(n * 2); int k = 0;
+    for(int i = 0; i < n; qs[k++] = ps[i++])
+        while(k > 1 && crossOp(qs[k - 2], qs[k - 1], ps[i]) <= 0) k--;
+    for(int i = n - 2, t = k; i >= 0; qs[k++] = ps[i--])
+        while(k > t && crossOp(qs[k - 2], qs[k - 1], ps[i]) <= 0) k--;
+    qs.resize(k - 1);
+    return qs;
+}
+
+db dist2(P a, P b) { return (a - b).abs2(); }
+
+db convexDiameter(vector<P> ps) { // 旋转卡尺
+    int n = ps.size();
+    if (n <= 1) return 0;
+    if (n == 2) return ps[0].distTo(ps[1]);
+    
+    db maxd2 = 0;
+    // 旋转卡尺寻找最远点对
+    for (int i = 0, j = 1; i < n; i++) {
+        // 当 (i, i+1, j+1) 的面积大于 (i, i+1, j) 时，j 向后移
+        // 这里使用 det (叉积) 计算平行四边形面积
+        while (sign((ps[(i + 1) % n] - ps[i]).det(ps[(j + 1) % n] - ps[i]) - 
+                   (ps[(i + 1) % n] - ps[i]).det(ps[j] - ps[i])) > 0) {
+            j = (j + 1) % n;
+        }
+        maxd2 = max({maxd2, dist2(ps[i], ps[j]), dist2(ps[(i + 1) % n], ps[j])});
+    }
+    return sqrt(maxd2);
+}
+
+// 辅助函数：将凸包的顶点调整为从左下角开始，且为逆时针
+void reorder(vector<P>& ps) {
+    int pos = 0;
+    for(int i = 1; i < ps.size(); i++) {
+        if(ps[i].y < ps[pos].y || (ps[i].y == ps[pos].y && ps[i].x < ps[pos].x)) pos = i;
+    }
+    rotate(ps.begin(), ps.begin() + pos, ps.end());
+}
+
+vector<P> minkowskiSum(vector<P> A, vector<P> B) { // 闵可夫斯基和
+    reorder(A); reorder(B);
+    int n = A.size(), m = B.size();
+    
+    // 构造差分向量
+    vector<P> v1(n), v2(m);
+    for(int i = 0; i < n; i++) v1[i] = A[(i + 1) % n] - A[i];
+    for(int i = 0; i < m; i++) v2[i] = B[(i + 1) % m] - B[i];
+    
+    vector<P> res;
+    res.push_back(A[0] + B[0]);
+    
+    // 归并排序边向量（按极角）
+    int i = 0, j = 0;
+    while(i < n && j < m) {
+        if(sign(v1[i].det(v2[j])) > 0) res.push_back(res.back() + v1[i++]);
+        else if(sign(v1[i].det(v2[j])) < 0) res.push_back(res.back() + v2[j++]);
+        else res.push_back(res.back() + v1[i++] + v2[j++]); // 平行向量合并
+    }
+    while(i < n) res.push_back(res.back() + v1[i++]);
+    while(j < m) res.push_back(res.back() + v2[j++]);
+    
+    // 重新跑一遍凸包以去重或处理共线（可选，视具体题目精度要求而定）
+    return convexHull(res); 
 }
 ```
