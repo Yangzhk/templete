@@ -1,6 +1,7 @@
 - [模意义下运算类](#模意义下运算类)
 - [矩阵运算类](#矩阵运算类)
 - [莫队](#莫队)
+- [字符串哈希](#字符串哈希)
 - [后缀数组](#后缀数组)
   - [后缀数组（Suffix Array）能解决的问题](#后缀数组suffix-array能解决的问题)
   - [一、基础能力](#一基础能力)
@@ -11,7 +12,6 @@
     - [4. 任意两个后缀的 LCP](#4-任意两个后缀的-lcp)
     - [5. 最长重复子串](#5-最长重复子串)
     - [6. 最长公共子串（两个字符串）](#6-最长公共子串两个字符串)
-    - [7. 多字符串最长公共子串](#7-多字符串最长公共子串)
   - [三、子串统计问题](#三子串统计问题)
     - [8. 不同子串个数](#8-不同子串个数)
     - [9. 第 $k$ 小子串](#9-第-k-小子串)
@@ -23,12 +23,6 @@
   - [五、区间与排名问题](#五区间与排名问题)
     - [14. 子串排名](#14-子串排名)
     - [15. 区间不同子串数](#15-区间不同子串数)
-  - [六、进阶应用](#六进阶应用)
-    - [16. 后缀自动机 / 后缀树替代问题](#16-后缀自动机--后缀树替代问题)
-    - [17. 最小表示法（循环串）](#17-最小表示法循环串)
-    - [18. 多模式匹配](#18-多模式匹配)
-  - [七、典型问题总结](#七典型问题总结)
-  - [总结](#总结)
 - [kmp 前缀函数 (前缀的最长 border)](#kmp-前缀函数-前缀的最长-border)
 - [xor 线性基](#xor-线性基)
 - [异或线性基（XOR Basis）](#异或线性基xor-basis)
@@ -42,7 +36,7 @@
     - [5. 子集异或相关计数问题](#5-子集异或相关计数问题)
     - [6. 图论问题](#6-图论问题)
     - [7. 区间 / 前缀问题](#7-区间--前缀问题)
-  - [总结](#总结-1)
+  - [总结](#总结)
 - [mobius 函数 (反演)](#mobius-函数-反演)
   - [莫比乌斯函数（Möbius Function）](#莫比乌斯函数möbius-function)
   - [莫比乌斯反演（Möbius Inversion）](#莫比乌斯反演möbius-inversion)
@@ -50,7 +44,8 @@
     - [形式二（对称形式）](#形式二对称形式)
     - [常见等价写法](#常见等价写法)
 - [exgcd 求 线性同余方程](#exgcd-求-线性同余方程)
-- [字符串哈希](#字符串哈希)
+- [中国剩余定理](#中国剩余定理)
+- [三模数 ntt](#三模数-ntt)
 - [多项式乘法 (ntt)](#多项式乘法-ntt)
 - [三维点类](#三维点类)
 - [最大流](#最大流)
@@ -276,7 +271,35 @@ while (R > r) remove_(a[R--]);
 
 ```
 
+### 字符串哈希 
+```
+using ull = unsigned long long;
+ull base = 131;
+ull mod1 = 1e9 + 21, mod2 = 1e9 + 7;
 
+ull get_hash1(std::string s) {
+    int len = s.size();
+    ull ans = 0;
+    for(int i = 0; i < len; i++) ans = (ans * base + (ull)s[i]) % mod1;
+    return ans;
+}
+
+ull get_hash2(std::string s) {
+    int len = s.size();
+    ull ans = 0;
+    for(int i = 0; i < len; i++) ans = (ans * base + (ull)s[i]) % mod2;
+    return ans;
+}
+
+bool cmp(const std::string s, const std::string t){ // 相同返回 0, 不同返回 1
+    bool f1 = get_hash1(s) != get_hash1(t);
+    bool f2 = get_hash2(s) != get_hash2(t);
+    return f1 or f2;
+}
+
+std::map<std::pair<ull, ull>, int> hash_map;//用 map 存双哈希值
+
+```
 
 ### 后缀数组
 
@@ -329,11 +352,7 @@ $$
 s + \# + t
 $$
 - 找相邻后缀分别来自两个串的最大 LCP
-
-##### 7. 多字符串最长公共子串
-
-- 滑动窗口 + 单调队列维护 LCP 最小值
-
+- 
 #### 三、子串统计问题
 
 ##### 8. 不同子串个数
@@ -379,36 +398,6 @@ $$
 
 - 需要结合数据结构（如线段树 / 离线处理）
 
-#### 六、进阶应用
-
-##### 16. 后缀自动机 / 后缀树替代问题
-
-- SA + LCP 可以替代：
-  - 后缀树（节省空间）
-  - 后缀自动机（部分问题）
-
-##### 17. 最小表示法（循环串）
-
-- 倍增字符串后用 SA 求最小字典序表示
-
-##### 18. 多模式匹配
-
-- 多个模式串统一在 SA 上二分
-
-#### 七、典型问题总结
-
-后缀数组特别适用于以下类型：
-
-- 子串相关问题（查找、统计、排名）
-- 重复结构问题（LCP、重复子串）
-- 多字符串比较问题
-- 字典序问题
-
-#### 总结
-
-> 后缀数组的核心作用：
->
-> **将“子串问题”转化为“后缀排序 + 区间 LCP 问题”，从而用排序和 RMQ 高效解决复杂字符串问题。**
 
 ```
 #include <iostream>
@@ -759,42 +748,64 @@ void Exgcd(int a, int b, int &x, int &y)
 
 ```
 
-### 字符串哈希 
+### 中国剩余定理
+
+上面算法计算所得的 $x$ 对于任意 $i = 1,2,\cdots,k$ 满足
+$$
+x \equiv a_i \pmod{n_i}.
+$$
+
+当 $i \ne j$ 时，有
+$$
+m_j \equiv 0 \pmod{n_i},
+$$
+故
+$$
+c_j \equiv m_j \equiv 0 \pmod{n_i}.
+$$
+
+又有
+$$
+c_i \equiv m_i \cdot (m_i^{-1} \bmod n_i) \equiv 1 \pmod{n_i}.
+$$
+
+所以我们有：
+$$
+\begin{aligned}
+x 
+&\equiv \sum_{j=1}^{k} a_j c_j \pmod{n_i} \\
+&\equiv a_i c_i \pmod{n_i} \\
+&\equiv a_i \cdot m_i \cdot (m_i^{-1} \bmod n_i) \pmod{n_i} \\
+&\equiv a_i \pmod{n_i}.
+\end{aligned}
+$$
+
 ```
-using ull = unsigned long long;
-ull base = 131;
-ull mod1 = 1e9 + 21, mod2 = 1e9 + 7;
-
-ull get_hash1(std::string s) {
-    int len = s.size();
-    ull ans = 0;
-    for(int i = 0; i < len; i++) ans = (ans * base + (ull)s[i]) % mod1;
-    return ans;
+LL CRT(int k, LL* a, LL* r) {
+    LL n = 1, ans = 0;
+    for (int i = 1; i <= k; i++) n = n * r[i];
+    for (int i = 1; i <= k; i++) {
+        LL m = n / r[i], b, y;
+        exgcd(m, r[i], b, y);  // b * m mod r[i] = 1
+        ans = (ans + a[i] * m * b % n) % n;
+    }
+    return (ans % n + n) % n;
 }
-
-ull get_hash2(std::string s) {
-    int len = s.size();
-    ull ans = 0;
-    for(int i = 0; i < len; i++) ans = (ans * base + (ull)s[i]) % mod2;
-    return ans;
-}
-
-bool cmp(const std::string s, const std::string t){ // 相同返回 0, 不同返回 1
-    bool f1 = get_hash1(s) != get_hash1(t);
-    bool f2 = get_hash2(s) != get_hash2(t);
-    return f1 or f2;
-}
-
-std::map<std::pair<ull, ull>, int> hash_map;//用 map 存双哈希值
 
 ```
+
+### 三模数 ntt
+
+$998244353, 1004535809, 469762049$
+
+取 $3$ 为原根
 
 ### 多项式乘法 (ntt)
 
 ```
 
 constexpr int N = 4e6 + 10;
-constexpr int mod = 998244353;
+constexpr int mod = 998244353; // 1004535809, 469762049
 
 int n, m;
 int F[N], G[N], rev[N];
