@@ -9,7 +9,6 @@ private:
     static const int mod = 998244353;
     static const int G = 3;
     
-    // 快速幂
     static int qpow(int a, int k) {
         int res = 1;
         for (; k; a = 1ll * a * a % mod, k >>= 1) {
@@ -18,7 +17,6 @@ private:
         return res;
     }
 
-    // 动态计算蝴蝶变换的 rev 数组
     static vector<int> get_rev(int limit) {
         vector<int> rev(limit);
         int bit = 0;
@@ -29,7 +27,6 @@ private:
         return rev;
     }
 
-    // 底层 NTT，就地变换
     static void NTT(vector<int>& a, int limit, bool type) {
         a.resize(limit, 0);
         vector<int> rev = get_rev(limit);
@@ -58,7 +55,6 @@ private:
 public:
     vector<int> a;
 
-    // 构造函数
     Poly() {}
     Poly(const vector<int>& _a) : a(_a) {}
     Poly(int val) { a.push_back(val); }
@@ -67,7 +63,6 @@ public:
     void resize(int n) { a.resize(n, 0); }
     int operator[](int idx) const { return idx < size() ? a[idx] : 0; }
 
-    // 多项式乘法
     Poly operator*(const Poly& rhs) const {
         if (size() == 0 || rhs.size() == 0) return Poly();
         int n = size(), m = rhs.size();
@@ -84,7 +79,6 @@ public:
         return Poly(A);
     }
 
-    // 求导
     Poly deriv() const {
         if (size() <= 1) return Poly(vector<int>{0});
         vector<int> res(size() - 1);
@@ -94,7 +88,6 @@ public:
         return Poly(res);
     }
 
-    // 积分
     Poly integ() const {
         if (size() == 0) return Poly();
         vector<int> res(size() + 1, 0);
@@ -104,7 +97,6 @@ public:
         return Poly(res);
     }
 
-    // 多项式求逆 (mod x^deg)
     Poly inv(int deg) const {
         if (deg <= 0) return Poly();
         Poly res(vector<int>{qpow(a[0], mod - 2)});
@@ -127,7 +119,6 @@ public:
         return res;
     }
 
-    // 多项式 Ln (mod x^deg)
     Poly ln(int deg) const {
         // 要求 a[0] == 1
         Poly res = (this->deriv() * this->inv(deg)).integ();
@@ -135,7 +126,6 @@ public:
         return res;
     }
 
-    // 多项式 Exp (mod x^deg)
     Poly exp(int deg) const {
         if (deg <= 0) return Poly();
         // 要求 a[0] == 0
