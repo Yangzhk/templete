@@ -205,19 +205,92 @@ while (R > r) remove_(a[R--]);
   - 子数组 xor 相关问题
 
 ```
-long long p[N];
+// 线性基 (60位, 适用于 1e18)
+struct XORBasis {
+    long long p[60] = {};
 
-void insert(long long x) {
-    // 0 <= x < 2^60
-    for (int i = 60; ~i; i--) {
-        if (!(x >> i)) continue;
-        if (!p[i]) {
-            p[i] = x;
-            break;
+    bool insert(long long x) {
+        for (int i = 60; ~i; i--) {
+            if (!(x >> i)) continue;
+            if (!p[i]) { p[i] = x; return true; }
+            x ^= p[i];
         }
-        x ^= p[i];
+        return false;
+    }
+
+    long long maxXor(long long init = 0) {
+        long long res = init;
+        for (int i = 60; ~i; i--)
+            if ((res ^ p[i]) > res) res ^= p[i];
+        return res;
+    }
+
+    void rebuild() { // 行最简形 (用于 kth)
+        for (int i = 60; ~i; i--) {
+            if (!p[i]) continue;
+            for (int j = i-1; ~j; j--)
+                if (p[i] >> j & 1) p[i] ^= p[j];
+        }
+    }
+
+    long long kth(long long k) { // 需先 rebuild, k 从 1 开始
+        long long res = 0;
+        for (int i = 60; ~i; i--) {
+            if (!p[i]) continue;
+            if (k & 1) res ^= p[i];
+            k >>= 1;
+        }
+        return res;
+    }
+};
+
+// 图论异或路径: 任意路径 xor = dis[u] ^ dis[v] ^ (环的任意组合)
+// dfs 找生成树, 环插入线性基
+XORBasis cycleBase;
+long long dis[N];
+bool vis[N];
+
+void dfs(int u, int fa) {
+    vis[u] = true;
+    for (auto [v, w] : g[u]) {
+        if (v == fa) continue;
+        if (!vis[v]) {
+            dis[v] = dis[u] ^ w;
+            dfs(v, u);
+        } else {
+            cycleBase.insert(dis[u] ^ dis[v] ^ w);
+        }
     }
 }
+// 查询: cycleBase.maxXor(dis[u] ^ dis[v])
+
+// 前缀线性基: 每个前缀维护一个基, insert 时尽量保留靠右的元素
+struct PrefixBasis {
+    static const int LOG = 60;
+    array<long long, LOG> b{};
+    array<int, LOG> pos{};
+
+    PrefixBasis() { pos.fill(-1); }
+
+    void insert(long long x, int id) {
+        for (int j = LOG-1; ~j; j--) {
+            if (!(x >> j)) continue;
+            if (!b[j]) { b[j] = x; pos[j] = id; break; }
+            if (id > pos[j]) { swap(x, b[j]); swap(id, pos[j]); }
+            x ^= b[j];
+        }
+    }
+
+    long long maxXor(int l, long long x = 0) { // 查询 [l, n-1]
+        long long res = x;
+        for (int j = LOG-1; ~j; j--)
+            if (b[j] && pos[j] >= l && (res ^ b[j]) > res)
+                res ^= b[j];
+        return res;
+    }
+};
+// 使用: for (int i = 0; i < n; i++) pref.insert(a[i], i);
+//       查询 a[l..r] 最大 xor: 对每个 r 维护一个版本, 查询 pref[r].maxXor(l)
 ```
 
 ### mobius 函数 (反演)

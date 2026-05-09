@@ -107,7 +107,27 @@ vector<int> kmp(const string &p, const string &t) {
 - Minimum period: `n - pi[n-1]` (divides n iff string is periodic)
 - Compress string: repeat of `n - pi[n-1]` length prefix
 
+**Minimum border of each prefix (by following pi chain):**
+```cpp
+// mb[i] = shortest border of s[0..i] (0 if none)
+vector<int> min_border_array(const string &s) {
+    auto pi = prefix_function(s);
+    int n = sz(s);
+    vector<int> mb(n);
+    for (int i = 0; i < n; i++) {
+        if (pi[i] == 0) {
+            mb[i] = 0;
+        } else {
+            mb[i] = mb[pi[i] - 1] ? mb[pi[i] - 1] : pi[i];
+        }
+    }
+    return mb;
+}
+```
+
 ---
+
+
 
 ## 3. Z-Function
 
