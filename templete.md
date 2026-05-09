@@ -52,94 +52,8 @@
 - [zkw 费用流](#zkw-费用流)
 - [计算几何 (dls version)](#计算几何-dls-version)
 
-### 模意义下运算类
-```
-#include <iostream>
-#include <algorithm>
-#include <cassert>
+### 模运算
 
-constexpr int P = 1e9 + 7;
-using i64 = long long;
-// assume -P <= x < 2P
-int norm(int x) {
-    if (x < 0) {
-        x += P;
-    }
-    if (x >= P) {
-        x -= P;
-    }
-    return x;
-}
-template<class T>
-T power(T a, i64 b) {
-    T res = 1;
-    for (; b; b /= 2, a *= a) {
-        if (b % 2) {
-            res *= a;
-        }
-    }
-    return res;
-}
-struct Z {
-    int x;
-    Z(int x = 0) : x(norm(x)) {}
-    Z(i64 x) : x(norm(x % P)) {}
-    int val() const {
-        return x;
-    }
-    Z operator-() const {
-        return Z(norm(P - x));
-    }
-    Z inv() const {
-        assert(x != 0);
-        return power(*this, P - 2);
-    }
-    Z &operator*=(const Z &rhs) {
-        x = i64(x) * rhs.x % P;
-        return *this;
-    }
-    Z &operator+=(const Z &rhs) {
-        x = norm(x + rhs.x);
-        return *this;
-    }
-    Z &operator-=(const Z &rhs) {
-        x = norm(x - rhs.x);
-        return *this;
-    }
-    Z &operator/=(const Z &rhs) {
-        return *this *= rhs.inv();
-    }
-    friend Z operator*(const Z &lhs, const Z &rhs) {
-        Z res = lhs;
-        res *= rhs;
-        return res;
-    }
-    friend Z operator+(const Z &lhs, const Z &rhs) {
-        Z res = lhs;
-        res += rhs;
-        return res;
-    }
-    friend Z operator-(const Z &lhs, const Z &rhs) {
-        Z res = lhs;
-        res -= rhs;
-        return res;
-    }
-    friend Z operator/(const Z &lhs, const Z &rhs) {
-        Z res = lhs;
-        res /= rhs;
-        return res;
-    }
-    friend std::istream &operator>>(std::istream &is, Z &a) {
-        i64 v;
-        is >> v;
-        a = Z(v);
-        return is;
-    }
-    friend std::ostream &operator<<(std::ostream &os, const Z &a) {
-        return os << a.val();
-    }
-};
- 
 Z fac[N], inv[N], pow2[N];
  
 Z qpow(Z a, int v = P - 2){
@@ -159,12 +73,6 @@ void init(){
  
     for(int i = N - 11; i >= 0; i--) {
         inv[i] = inv[i+1] * (i+1);
-    }
- 
-    pow2[0] = 1;
- 
-    for(int i = 1; i <= N - 10; i++) {
-        pow2[i] = 2 * pow2[i-1];
     }
 
 }
@@ -196,23 +104,6 @@ struct matrix{
             for(int j = 0; j < sz; j++)
                 a[i][j] = b[i][j];
     }
-    matrix operator - (const matrix& T) const {
-        matrix res;
-        for (int i = 0; i < sz; i++)
-            for (int j = 0; j < sz; j++) {
-                res.a[i][j] = (a[i][j] - T.a[i][j] + mod) % mod;
-            }
-        return res;
-    }
-
-    matrix operator + (const matrix& T) const {
-        matrix res;
-        for (int i = 0; i < sz; i++)
-            for (int j = 0; j < sz; j++) {
-                res.a[i][j] = (a[i][j] + T.a[i][j]) % mod;
-            }
-        return res;
-    }
 
     matrix operator * (const matrix& T) const {
         matrix res;
@@ -237,15 +128,6 @@ struct matrix{
             x >>= 1;
         }
         return res;
-    }
-
-    bool operator == (const matrix& T) const {
-        bool same = true;
-        for(int i = 0; i < sz; i++)
-            for(int j = 0; j < sz; j++)
-                if(a[i][j] != T.a[i][j])
-                    same = false;
-        return same;
     }
 
 };
@@ -302,102 +184,6 @@ std::map<std::pair<ull, ull>, int> hash_map;//用 map 存双哈希值
 ```
 
 ### 后缀数组
-
-#### 后缀数组（Suffix Array）能解决的问题
-
-后缀数组（SA）是一种将字符串所有后缀按字典序排序的数据结构，通常配合高度数组（LCP）使用，可以高效解决大量字符串问题。
-
-#### 一、基础能力
-
-##### 1. 子串排序 / 字典序比较
-
-- 任意两个子串 $s[l_1 \dots r_1]$ 和 $s[l_2 \dots r_2]$ 的字典序比较
-- 转化为比较对应后缀的排名 + LCP
-
-##### 2. 快速判断子串是否出现
-
-- 判断字符串 $t$ 是否为 $s$ 的子串
-- 在 SA 上二分查找
-
-时间复杂度：
-$$
-O(|t| \log n)
-$$
-
-##### 3. 统计子串出现次数
-
-- 利用 SA + 二分找到区间
-- 区间长度即出现次数
-
-#### 二、LCP（最长公共前缀）相关问题
-
-##### 4. 任意两个后缀的 LCP
-
-- 利用 height 数组 + RMQ：
-$$
-\text{LCP}(i, j) = \min(\text{height}[l+1 \dots r])
-$$
-
-##### 5. 最长重复子串
-
-- 即：
-$$
-\max(\text{height}[i])
-$$
-
-##### 6. 最长公共子串（两个字符串）
-
-- 将两个串拼接：
-$$
-s + \# + t
-$$
-- 找相邻后缀分别来自两个串的最大 LCP
-- 
-#### 三、子串统计问题
-
-##### 8. 不同子串个数
-
-公式：
-$$
-\frac{n(n+1)}{2} - \sum_{i=2}^{n} \text{height}[i]
-$$
-
-##### 9. 第 $k$ 小子串
-
-- 每个后缀贡献：
-$$
-(n - \text{sa}[i] + 1) - \text{height}[i]
-$$
-- 按顺序枚举定位第 $k$ 个
-
-##### 10. 子串去重统计
-
-- 利用 height 去掉重复前缀
-
-#### 四、重复结构与模式问题
-
-##### 11. 最长重复且不重叠子串
-
-- 二分答案 + 检查 height 区间是否合法
-
-##### 12. 出现至少 $k$ 次的最长子串
-
-- 二分长度 + 检查是否有连续 height $\ge L$
-
-##### 13. 字符串周期问题
-
-- 利用 LCP 判断周期性
-
-#### 五、区间与排名问题
-
-##### 14. 子串排名
-
-- 求某个子串在所有子串中的排名
-
-##### 15. 区间不同子串数
-
-- 需要结合数据结构（如线段树 / 离线处理）
-
 
 ```
 #include <iostream>
@@ -548,14 +334,8 @@ vector<int> prefix_function(string s) {
 
 ---
 
-##### 5. 子集异或相关计数问题
 
-- 如统计满足某种条件的子集异或值个数
-- 常结合高斯消元与状态压缩
-
----
-
-##### 6. 图论问题
+##### 5. 图论问题
 
 - 在图上维护路径异或（如树上路径 xor、带环图）
 - 求：
@@ -564,19 +344,11 @@ vector<int> prefix_function(string s) {
 
 ---
 
-##### 7. 区间 / 前缀问题
+##### 6. 区间 / 前缀问题
 
 - 前缀异或 + 线性基：
   - 区间最大 xor
   - 子数组 xor 相关问题
-
----
-
-#### 总结
-
-异或线性基本质是：
-
-> 在 $\mathbb{F}_2$ 上对整数进行高斯消元，维护一个极大线性无关组，从而高效处理“异或可达性”和“最优值”问题。
 
 ```
 long long p[N];
