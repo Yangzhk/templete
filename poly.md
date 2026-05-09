@@ -1,3 +1,24 @@
+- [NTT 与基础框架](#ntt-与基础框架)
+- [基础运算](#基础运算)
+  - [乘法](#乘法)
+  - [求导 / 积分](#求导--积分)
+- [多项式求逆](#多项式求逆)
+- [多项式 ln / exp](#多项式-ln--exp)
+- [多项式开根](#多项式开根)
+- [多项式快速幂](#多项式快速幂)
+- [单点求值](#单点求值)
+- [拉格朗日插值](#拉格朗日插值)
+  - [一般插值](#一般插值)
+  - [连续点值插值](#连续点值插值)
+- [复杂度总结](#复杂度总结)
+
+---
+
+## NTT 与基础框架
+
+模数 $998244353 = 119 \times 2^{23} + 1$，原根 $g = 3$，支持长度 $\le 2^{23}$ 的 NTT。
+
+```cpp
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -8,7 +29,7 @@ class Poly {
 private:
     static const int mod = 998244353;
     static const int G = 3;
-    
+
     static int qpow(int a, int k) {
         int res = 1;
         for (; k; a = 1ll * a * a % mod, k >>= 1) {
@@ -51,7 +72,13 @@ private:
             }
         }
     }
+```
 
+---
+
+## 基础运算
+
+```cpp
 public:
     vector<int> a;
 
@@ -62,7 +89,13 @@ public:
     int size() const { return a.size(); }
     void resize(int n) { a.resize(n, 0); }
     int operator[](int idx) const { return idx < size() ? a[idx] : 0; }
+```
 
+### 乘法
+
+卷积 $C = A \times B$，结果长度为 $n + m - 1$。
+
+```cpp
     Poly operator*(const Poly& rhs) const {
         if (size() == 0 || rhs.size() == 0) return Poly();
         int n = size(), m = rhs.size();
@@ -74,11 +107,23 @@ public:
         NTT(B, limit, true);
         for (int i = 0; i < limit; i++) A[i] = 1ll * A[i] * B[i] % mod;
         NTT(A, limit, false);
-        
-        A.resize(n + m - 1); // 去除多余的 0
+
+        A.resize(n + m - 1);
         return Poly(A);
     }
+```
 
+### 求导 / 积分
+
+$$
+\frac{d}{dx} \sum a_i x^i = \sum (i+1)a_{i+1} x^i
+$$
+
+$$
+\int \sum a_i x^i = \sum \frac{a_i}{i+1} x^{i+1}
+$$
+
+```cpp
     Poly deriv() const {
         if (size() <= 1) return Poly(vector<int>{0});
         vector<int> res(size() - 1);
@@ -96,7 +141,17 @@ public:
         }
         return Poly(res);
     }
+```
 
+---
+
+## 多项式求逆
+
+求 $F \cdot G \equiv 1 \pmod{x^n}$。
+
+牛顿迭代：$G_{k+1} = G_k (2 - F \cdot G_k)$，要求 $a[0] \neq 0$。
+
+```cpp
     Poly inv(int deg) const {
         if (deg <= 0) return Poly();
         Poly res(vector<int>{qpow(a[0], mod - 2)});
@@ -104,7 +159,7 @@ public:
             int limit = len << 1;
             vector<int> A(len);
             for(int i = 0; i < len; i++) A[i] = (*this)[i];
-            
+
             vector<int> B = res.a;
             NTT(A, limit, true);
             NTT(B, limit, true);
@@ -112,13 +167,27 @@ public:
                 B[i] = 1ll * B[i] * (2 - 1ll * A[i] * B[i] % mod + mod) % mod;
             }
             NTT(B, limit, false);
-            B.resize(len); // 截断到当前精度
+            B.resize(len);
             res = Poly(B);
         }
         res.resize(deg);
         return res;
     }
+```
 
+---
+
+## 多项式 ln / exp
+
+$$
+\ln F = \int \frac{F'}{F}, \quad a[0] = 1
+$$
+
+$$
+\exp F = G,\ \ln G - F = 0,\quad G_{k+1} = G_k (1 - \ln G_k + F), \quad a[0] = 0
+$$
+
+```cpp
     Poly ln(int deg) const {
         // 要求 a[0] == 1
         Poly res = (this->deriv() * this->inv(deg)).integ();
@@ -140,35 +209,35 @@ public:
             for(int i = 0; i < len; i++) {
                 tmp[i] = (A[i] - tmp[i] + mod) % mod;
             }
-            tmp[0] = (tmp[0] + 1) % mod; // (1 - ln(G) + F)
+            tmp[0] = (tmp[0] + 1) % mod;
 
             res = res * Poly(tmp);
-            res.resize(len); // 截断
+            res.resize(len);
         }
         res.resize(deg);
         return res;
     }
+```
 
-    // 单点求值 (Horner)
-    int eval(int x) const {
-        int res = 0;
-        for (int i = size() - 1; i >= 0; i--) {
-            res = (1ll * res * x + a[i]) % mod;
-        }
-        return res;
-    }
+---
 
+## 多项式开根
+
+求 $G^2 \equiv F \pmod{x^n}$。
+
+牛顿迭代：$G_{k+1} = \dfrac{G_k + F \cdot G_k^{-1}}{2}$，要求 $a[0] = 1$。
+
+```cpp
     // 多项式开根，要求 a[0] == 1
     Poly sqrt(int deg) const {
         if (deg <= 0) return Poly();
-        Poly res(vector<int>{1}); // sqrt(1) = 1
+        Poly res(vector<int>{1});
         for (int len = 2; len < (deg << 1); len <<= 1) {
             vector<int> f_vec(len, 0);
             for (int i = 0; i < len; i++) f_vec[i] = (*this)[i];
             Poly F(f_vec);
 
             Poly inv_res = res.inv(len);
-            // tmp = F * inv(res)  =>  res = (res + tmp) / 2
             Poly tmp = F * inv_res;
             tmp.resize(len);
             for (int i = 0; i < len; i++) {
@@ -180,7 +249,19 @@ public:
         res.resize(deg);
         return res;
     }
+```
 
+---
+
+## 多项式快速幂
+
+$$
+F^k = a[0]^k \cdot \exp(k \cdot \ln(F / a[0]))
+$$
+
+自动处理 $a[0] = 0$ 的情况（提取 $x^{\text{shift}}$ 因子）。
+
+```cpp
     // 多项式快速幂 F^k (k 较小时)
     Poly pow(int deg, long long k) const {
         if (deg <= 0) return Poly();
@@ -189,7 +270,6 @@ public:
             return res;
         }
 
-        // 找到第一个非零系数
         int shift = 0;
         while (shift < size() && a[shift] == 0) shift++;
         if (shift == size()) { Poly res; res.a.resize(deg, 0); return res; }
@@ -212,7 +292,6 @@ public:
             return Poly(res_vec);
         }
 
-        // a[0] != 0: F^k = a[0]^k * exp(k * ln(F / a[0]))
         int inv_a0 = qpow(a[0], mod - 2);
         int a0_k = qpow(a[0], k % (mod - 1));
 
@@ -231,7 +310,122 @@ public:
         return res;
     }
 
-    // 连续点值插值: y[0..n-1] = f(1), f(2), ..., f(n), 求 f(k)
+    // 多项式快速幂 F^k (k 极大, 字符串表示)
+    Poly pow(int deg, const string& s) const {
+        if (s.size() <= 18 || (s.size() == 19 && s <= "9223372036854775807")) {
+            return pow(deg, stoll(s));
+        }
+        int km = 0, kp = 0;
+        for (char c : s) {
+            km = (10ll * km + (c - '0')) % mod;
+            kp = (10ll * kp + (c - '0')) % (mod - 1);
+        }
+        if (s == "0") {
+            Poly res; res.a.resize(deg, 0); res.a[0] = 1;
+            return res;
+        }
+
+        int shift = 0;
+        while (shift < size() && a[shift] == 0) shift++;
+        if (shift == size()) { Poly res; res.a.resize(deg, 0); return res; }
+        if (shift > 0) { Poly res; res.a.resize(deg, 0); return res; }
+
+        int inv_a0 = qpow(a[0], mod - 2);
+        int a0_k = qpow(a[0], kp);
+
+        Poly norm;
+        norm.a.resize(size());
+        for (int i = 0; i < size(); i++) norm.a[i] = 1ll * a[i] * inv_a0 % mod;
+
+        Poly lnx = norm.ln(deg);
+        for (int i = 0; i < lnx.size() && i < deg; i++) {
+            lnx.a[i] = 1ll * lnx.a[i] * km % mod;
+        }
+        Poly res = lnx.exp(deg);
+        for (int i = 0; i < res.size(); i++) {
+            res.a[i] = 1ll * res.a[i] * a0_k % mod;
+        }
+        return res;
+    }
+```
+
+---
+
+## 单点求值
+
+霍纳法（Horner）求 $f(x)$，$O(n)$。
+
+```cpp
+    // 单点求值 (Horner)
+    int eval(int x) const {
+        int res = 0;
+        for (int i = size() - 1; i >= 0; i--) {
+            res = (1ll * res * x + a[i]) % mod;
+        }
+        return res;
+    }
+```
+
+---
+
+## 拉格朗日插值
+
+### 一般插值
+
+给定 $n$ 个点 $(x_i, y_i)$，构造 $n-1$ 次多项式。
+
+$$
+P(x) = \sum y_i \cdot \prod_{j \ne i} \frac{x - x_j}{x_i - x_j}
+$$
+
+实现：先构造 $M(x) = \prod (x - x_i)$，再对每个 $i$ 用合成除法求 $M(x) / (x - x_i)$。
+
+```cpp
+    static Poly lagrange(const vector<int>& xs, const vector<int>& ys) {
+        int n = xs.size();
+        vector<int> M(n + 1, 0);
+        M[0] = 1;
+        for (int i = 0; i < n; i++) {
+            int xi = xs[i];
+            for (int k = i; k >= 0; k--) {
+                M[k+1] = (M[k+1] + M[k]) % mod;
+                M[k] = (mod - 1ll * xi * M[k] % mod) % mod;
+            }
+        }
+
+        Poly ans(vector<int>(n, 0));
+        for (int i = 0; i < n; i++) {
+            int xi = xs[i];
+            vector<int> Q(n, 0);
+            Q[n-1] = M[n];
+            for (int k = n-1; k >= 1; k--) {
+                Q[k-1] = (M[k] + 1ll * xi * Q[k]) % mod;
+            }
+            int den = 1;
+            for (int j = 0; j < n; j++) {
+                if (j == i) continue;
+                den = 1ll * den * (xi - xs[j] + mod) % mod;
+            }
+            int coeff = 1ll * ys[i] * qpow(den, mod - 2) % mod;
+            for (int k = 0; k < n; k++) {
+                ans.a[k] = (ans.a[k] + 1ll * coeff * Q[k]) % mod;
+            }
+        }
+        return ans;
+    }
+```
+
+### 连续点值插值
+
+已知 $f(1), f(2), \dots, f(n)$，求 $f(k)$。
+
+$$
+f(k) = \sum_{i=1}^{n} y_{i-1} \cdot \frac{\text{pref}_{i-1} \cdot \text{suff}_{i+1}}{(i-1)! \cdot (-1)^{n-i} \cdot (n-i)!}
+$$
+
+$O(n)$ 预处理阶乘和前后缀积，$O(n)$ 计算。支持 $k$ 到 $10^{18}$ 取模。
+
+```cpp
     static int lagrange_continuous(const vector<int>& y, long long k) {
         int n = y.size();
         if (k <= n) return y[k - 1];
@@ -257,9 +451,27 @@ public:
             int num = 1ll * pref[i-1] * suff[i+1] % mod;
             int den = 1ll * inv_fact[i-1] * inv_fact[n-i] % mod;
             int term = 1ll * y[i-1] * num % mod * den % mod;
-            if ((n - i) & 1) term = mod - term;  // (-1)^{n-i}
+            if ((n - i) & 1) term = mod - term;
             ans = (ans + term) % mod;
         }
         return ans;
     }
 };
+```
+
+---
+
+## 复杂度总结
+
+| 操作 | 复杂度 | 备注 |
+|------|--------|------|
+| `operator*` | $O(n \log n)$ | NTT 卷积 |
+| `deriv` / `integ` | $O(n)$ | 求导 / 积分 |
+| `inv` | $O(n \log n)$ | 牛顿迭代 |
+| `ln` | $O(n \log n)$ | $a[0] = 1$ |
+| `exp` | $O(n \log n)$ | $a[0] = 0$ |
+| `sqrt` | $O(n \log n)$ | $a[0] = 1$ |
+| `pow` | $O(n \log n)$ | 自动处理 $a[0]=0$ |
+| `eval` | $O(n)$ | 霍纳法 |
+| `lagrange` | $O(n^2)$ | 一般插值 |
+| `lagrange_continuous` | $O(n)$ | 连续点值 |
