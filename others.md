@@ -8,8 +8,6 @@
 - [mobius 函数 (反演)](#mobius-函数-反演)
 - [exgcd 求 线性同余方程](#exgcd-求-线性同余方程)
 - [中国剩余定理](#中国剩余定理)
-- [三模数 ntt](#三模数-ntt)
-- [多项式乘法 (ntt)](#多项式乘法-ntt)
 - [最大流](#最大流)
 - [zkw 费用流](#zkw-费用流)
 - [计算几何 (dls version)](#计算几何-dls-version)
@@ -498,58 +496,7 @@ LL CRT(int k, LL* a, LL* r) {
 
 ```
 
-### 三模数 ntt
 
-$998244353, 1004535809, 469762049$
-
-取 $3$ 为原根
-
-### 多项式乘法 (ntt)
-
-```
-
-constexpr int N = 4e6 + 10;
-constexpr int mod = 998244353; // 1004535809, 469762049
-
-int n, m;
-int F[N], G[N], rev[N];
-
-int Pow(int a, int k){
-    int res = 1;
-    for(; k; a = 1ll * a * a % mod, k >>= 1){
-        if(k & 1) res = 1ll * res * a % mod;
-    }
-    return res;
-}
-
-void NTT(int len, int *F, bool type){
-    for(int i = 0; i < len; i++) if(i < rev[i]) swap(F[i], F[rev[i]]);
-    for(int k = 1; k < len; k <<= 1){
-        int eps = Pow(type ? 3 : 332748118, (mod - 1) / (k << 1));
-        for(int i = 0; i < len; i += (k << 1)) {
-            for(int j = i, g = 1; j < i + k; j++, g = 1ll * g * eps % mod) {
-                int tmp1 = F[j], tmp2 = 1ll * g * F[j + k] % mod;
-                F[j] = tmp1 + tmp2 >= mod ? tmp1 + tmp2 - mod : tmp1 + tmp2;
-                F[j + k] = tmp1 - tmp2 < 0 ? tmp1 - tmp2 + mod : tmp1 - tmp2;
-            }
-        }
-    }
-}
-
-void polymul(int *F, int *G){
-    int len, ln;
-    for(len = 1, ln = 0; len <= 2 * (n-1); len <<= 1, ln++);
-    for(int i = 0; i < len; i++) rev[i] = (rev[i >> 1] >> 1) + (i & 1) * (1 << ln - 1);
-
-    NTT(len, F, true), NTT(len, G, true);
-    rep(i, 0, len - 1) F[i] = 1ll * F[i] * G[i] % mod;
-    NTT(len, F, false);
-
-    int Inv = Pow(len, mod - 2);
-    rep(i, 0, len - 1) F[i] = 1ll * F[i] * Inv % mod;
-}
-
-```
 
 ### 最大流
 
