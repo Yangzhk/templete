@@ -8,10 +8,10 @@
 - [中国剩余定理](#中国剩余定理)
 - [三模数 ntt](#三模数-ntt)
 - [多项式乘法 (ntt)](#多项式乘法-ntt)
-- [三维点类](#三维点类)
 - [最大流](#最大流)
 - [zkw 费用流](#zkw-费用流)
 - [计算几何 (dls version)](#计算几何-dls-version)
+- [三维点类](#三维点类)
 
 ### 模运算
 
@@ -546,47 +546,6 @@ void polymul(int *F, int *G){
 
 ```
 
-### 三维点类
-
-```
-const double EPS = 1e-12;
-const double pi = 3.141593;
-
-struct Vec {
-    double x, y, z;
-    double len;
-    
-    Vec() {}
-    Vec(double x, double y, double z): x(x), y(y), z(z) {}
-    
-    Vec operator + (const Vec& b) const {
-        return Vec(x+b.x, y+b.y, z+b.z);
-    }
-    Vec operator - (const Vec& b) const {
-        return Vec(x-b.x, y-b.y, z-b.z);
-    }
-    Vec operator * (double k) const {
-        return Vec(x*k, y*k, z*k);
-    }
-};
-
-double dot(Vec a, Vec b) {
-    return a.x*b.x + a.y*b.y + a.z*b.z;
-}
-
-Vec cross(Vec a, Vec b) {
-    return Vec(
-        a.y*b.z - a.z*b.y,
-        a.z*b.x - a.x*b.z,
-        a.x*b.y - a.y*b.x
-    );
-}
-
-double norm(Vec a) {
-    return sqrt(dot(a,a));
-}
-```
-
 ### 最大流
 
 ```
@@ -906,5 +865,47 @@ vector<P> minkowskiSum(vector<P> A, vector<P> B) { // 闵可夫斯基和
     
     // 重新跑一遍凸包以去重或处理共线（可选，视具体题目精度要求而定）
     return convexHull(res); 
+}
+```
+
+
+### 三维点类
+
+```
+const double EPS = 1e-12;
+const double pi = 3.141593;
+
+struct Vec {
+    double x, y, z;
+    double len;
+    
+    Vec() {}
+    Vec(double x, double y, double z): x(x), y(y), z(z) {}
+    
+    Vec operator + (const Vec& b) const {
+        return Vec(x+b.x, y+b.y, z+b.z);
+    }
+    Vec operator - (const Vec& b) const {
+        return Vec(x-b.x, y-b.y, z-b.z);
+    }
+    Vec operator * (double k) const {
+        return Vec(x*k, y*k, z*k);
+    }
+};
+
+double dot(Vec a, Vec b) {
+    return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+
+Vec cross(Vec a, Vec b) {
+    return Vec(
+        a.y*b.z - a.z*b.y,
+        a.z*b.x - a.x*b.z,
+        a.x*b.y - a.y*b.x
+    );
+}
+
+double norm(Vec a) {
+    return sqrt(dot(a,a));
 }
 ```
