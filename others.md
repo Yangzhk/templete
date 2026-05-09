@@ -6,8 +6,12 @@
 - [莫队](#莫队)
 - [xor 线性基](#xor-线性基)
 - [mobius 函数 (反演)](#mobius-函数-反演)
+- [数论分块（整除分块）](#数论分块整除分块)
 - [exgcd 求 线性同余方程](#exgcd-求-线性同余方程)
 - [中国剩余定理](#中国剩余定理)
+- [Lucas 定理](#lucas-定理)
+- [BSGS（离散对数）](#bsgs离散对数)
+- [Miller-Rabin & Pollard Rho](#miller-rabin--pollard-rho)
 - [最大流](#最大流)
 - [zkw 费用流](#zkw-费用流)
 - [计算几何 (dls version)](#计算几何-dls-version)
@@ -359,6 +363,51 @@ $$
 g(n) = \sum_{d \mid n} \mu\left(\frac{n}{d}\right)\, f(d)
 $$
 
+---
+
+#### 关键恒等式
+
+$$
+\sum_{d \mid n} \mu(d) = [n = 1]
+$$
+
+这是反演公式成立的根本原因（即 $\mu * 1 = \varepsilon$，狄利克雷卷积下 $\mu$ 是常函数 $1$ 的逆元，$\varepsilon(n) = [n=1]$ 是单位元）。
+
+---
+
+#### 互素判别（最常用技巧）
+
+$$
+[\gcd(i, j) = 1] = \sum_{d \mid \gcd(i, j)} \mu(d)
+$$
+
+可把含 $\gcd$ 的求和限制改写为对约数的求和，进而交换求和顺序、提取出 $\lfloor n/d \rfloor$ 形式。
+
+---
+
+#### 典型应用：互素对计数
+
+求 $\displaystyle\sum_{i=1}^{n} \sum_{j=1}^{m} [\gcd(i,j) = 1]$：
+
+$$
+\sum_{i=1}^{n}\sum_{j=1}^{m} \sum_{d \mid \gcd(i,j)} \mu(d)
+= \sum_{d=1}^{\min(n,m)} \mu(d) \left\lfloor \frac{n}{d} \right\rfloor \left\lfloor \frac{m}{d} \right\rfloor
+$$
+
+配合**数论分块**可在 $O(\sqrt{n})$ 时间求值。若题目要求 $\gcd(i,j) = k$，先令 $i = ki', j = kj'$ 化为 $\gcd = 1$。
+
+---
+
+#### 与积性函数的卷积
+
+记 $\text{id}(n) = n, \mathbf{1}(n) = 1$，常用关系：
+
+- $\varphi * \mathbf{1} = \text{id}$，即 $\sum_{d \mid n} \varphi(d) = n$
+- $\varphi = \mu * \text{id}$，即 $\varphi(n) = \sum_{d \mid n} \mu(d) \cdot \dfrac{n}{d}$
+- $d(n) = \mathbf{1} * \mathbf{1}$，$\sigma(n) = \mathbf{1} * \text{id}$
+
+---
+
 ```
 vector<int> mu(N), primes;
 vector<bool> isprime(N, true);
@@ -396,6 +445,35 @@ int getmu(int x) { // O(sqrt(n)) 求单个 mobius 函数
     }
     if(x > 1) s *= -1;
     return s;
+}
+```
+
+### 数论分块（整除分块）
+
+利用 $\lfloor n/d \rfloor$ 至多有 $O(\sqrt n)$ 个不同取值。固定值 $v = \lfloor n/d \rfloor$ 时，最大的 $d$ 等于 $\lfloor n / v \rfloor$，因此可以把这些相同取值的 $d$ 合并为一个区间 $[l, r]$ 一起处理。
+
+适用场景：与莫比乌斯反演组合（$\sum \mu(d) \lfloor n/d \rfloor \lfloor m/d \rfloor$）、约数和、欧拉函数前缀和、$\sum_{i=1}^n \lfloor n/i \rfloor$ 等。
+
+```
+// sum_{i=1..n} floor(n/i), O(sqrt(n))
+long long sumDiv(long long n) {
+    long long ans = 0;
+    for (long long l = 1, r; l <= n; l = r + 1) {
+        r = n / (n / l);
+        ans += (r - l + 1) * (n / l);
+    }
+    return ans;
+}
+
+// 二维分块: floor(n/i) 和 floor(m/i) 同时分块
+// sf[i] = f(1) + f(2) + ... + f(i) (例如 mu 的前缀和)
+long long sumDiv2(long long n, long long m, vector<long long>& sf) {
+    long long ans = 0, lim = min(n, m);
+    for (long long l = 1, r; l <= lim; l = r + 1) {
+        r = min(n / (n / l), m / (m / l));
+        ans += (sf[r] - sf[l - 1]) * (n / l) * (m / l);
+    }
+    return ans;
 }
 ```
 
@@ -496,7 +574,176 @@ LL CRT(int k, LL* a, LL* r) {
 
 ```
 
+### Lucas 定理
 
+对**素数** $p$：
+
+$$
+\binom{n}{m} \equiv \binom{n \bmod p}{m \bmod p} \cdot \binom{\lfloor n/p \rfloor}{\lfloor m/p \rfloor} \pmod p
+$$
+
+适用于 $n, m$ 极大但 $p$ 较小（$p \le 10^5$ 量级）的二项式系数取模。时间复杂度 $O(p + \log_p n)$。
+
+```
+long long lucas_pow(long long a, long long b, long long p) {
+    long long r = 1; a %= p;
+    for (; b; b >>= 1, a = a * a % p) if (b & 1) r = r * a % p;
+    return r;
+}
+
+// 直接组合: 要求 0 <= m, n < p, p 为素数
+long long C_small(long long n, long long m, long long p) {
+    if (m > n || m < 0) return 0;
+    long long a = 1, b = 1;
+    for (long long i = 0; i < m; i++) {
+        a = a * ((n - i) % p) % p;
+        b = b * (i + 1) % p;
+    }
+    return a * lucas_pow(b, p - 2, p) % p;
+}
+
+long long Lucas(long long n, long long m, long long p) {
+    if (m == 0) return 1;
+    return C_small(n % p, m % p, p) * Lucas(n / p, m / p, p) % p;
+}
+```
+
+### BSGS（离散对数）
+
+求解 $a^x \equiv b \pmod p$，先考虑 $\gcd(a, p) = 1$ 的情形。
+
+设 $m = \lceil \sqrt p \rceil$，写 $x = im - j$，$0 \le j < m,\ 1 \le i \le m$，则
+$$
+a^{im} \equiv b \cdot a^j \pmod p
+$$
+
+枚举 $j$ 把 $b a^j$ 入哈希表，再枚举 $i$ 查表。时间复杂度 $O(\sqrt p)$。
+
+```
+long long bsgs_pow(long long a, long long b, long long p) {
+    long long r = 1; a %= p;
+    for (; b; b >>= 1, a = a * a % p) if (b & 1) r = r * a % p;
+    return r;
+}
+
+// a^x ≡ b (mod p), gcd(a, p) = 1; 无解返回 -1
+long long BSGS(long long a, long long b, long long p) {
+    a %= p; b %= p;
+    if (b == 1 || p == 1) return 0;
+    long long m = (long long)ceil(sqrt((double)p));
+    unordered_map<long long, long long> mp;
+    long long cur = b;
+    for (long long j = 0; j < m; j++) {
+        mp[cur] = j;
+        cur = cur * a % p;
+    }
+    long long am = bsgs_pow(a, m, p);
+    cur = 1;
+    for (long long i = 1; i <= m; i++) {
+        cur = cur * am % p;
+        if (mp.count(cur)) return i * m - mp[cur];
+    }
+    return -1;
+}
+
+// 不要求 gcd(a, p) = 1: 不断把公因子从两边消掉, 直到互素再调用 BSGS
+long long exBSGS(long long a, long long b, long long p) {
+    a = (a % p + p) % p; b = (b % p + p) % p;
+    if (b == 1 || p == 1) return 0;
+    long long g, k = 0, ak = 1;
+    while ((g = __gcd(a, p)) > 1) {
+        if (b % g) return -1;
+        b /= g; p /= g;
+        ak = ak * (a / g) % p;
+        k++;
+        if (ak == b) return k;
+    }
+    // 此时 gcd(ak, p) = 1, 用 exgcd 求 ak^{-1} (mod p)
+    long long x = 1, y = 0, x1 = 0, y1 = 1, A = ak, P = p;
+    while (P) {
+        long long q = A / P;
+        tie(x, x1) = make_pair(x1, x - q * x1);
+        tie(y, y1) = make_pair(y1, y - q * y1);
+        tie(A, P) = make_pair(P, A - q * P);
+    }
+    long long inv = (x % p + p) % p;
+    long long r = BSGS(a, b * inv % p, p);
+    return r < 0 ? -1 : r + k;
+}
+```
+
+### Miller-Rabin & Pollard Rho
+
+**Miller-Rabin**：写 $n - 1 = 2^s \cdot d$（$d$ 奇）。若 $n$ 为奇素数，则对任意 $\gcd(a, n) = 1$，要么 $a^d \equiv 1$，要么存在 $0 \le r < s$ 使 $a^{2^r d} \equiv -1 \pmod n$。取见证集 $\{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37\}$ 即可对 $n < 2^{64}$ 给出**确定性**判定。
+
+**Pollard Rho**：迭代 $x_{k+1} = x_k^2 + c \pmod n$ 产生 $\rho$ 形循环，期望 $O(n^{1/4})$ 步通过 $\gcd(|x - y|, n)$ 找到非平凡因子。
+
+```
+using u64 = unsigned long long;
+using u128 = __uint128_t;
+
+u64 mulmod(u64 a, u64 b, u64 m) { return (u128)a * b % m; }
+
+u64 powmod(u64 a, u64 e, u64 m) {
+    u64 r = 1; a %= m;
+    for (; e; e >>= 1, a = mulmod(a, a, m)) if (e & 1) r = mulmod(r, a, m);
+    return r;
+}
+
+bool millerRabin(u64 n) {
+    if (n < 2) return false;
+    for (u64 p : {2ULL, 3ULL, 5ULL, 7ULL, 11ULL, 13ULL, 17ULL, 19ULL, 23ULL, 29ULL, 31ULL, 37ULL}) {
+        if (n == p) return true;
+        if (n % p == 0) return false;
+    }
+    u64 d = n - 1; int s = 0;
+    while (!(d & 1)) d >>= 1, s++;
+    for (u64 a : {2ULL, 3ULL, 5ULL, 7ULL, 11ULL, 13ULL, 17ULL, 19ULL, 23ULL, 29ULL, 31ULL, 37ULL}) {
+        u64 x = powmod(a, d, n);
+        if (x == 1 || x == n - 1) continue;
+        bool comp = true;
+        for (int r = 0; r < s - 1; r++) {
+            x = mulmod(x, x, n);
+            if (x == n - 1) { comp = false; break; }
+        }
+        if (comp) return false;
+    }
+    return true;
+}
+
+u64 pollardRho(u64 n) {
+    if (n % 2 == 0) return 2;
+    static mt19937_64 rng(20231103);
+    while (true) {
+        u64 c = rng() % (n - 1) + 1;
+        auto f = [&](u64 x) { return (mulmod(x, x, n) + c) % n; };
+        u64 x = rng() % n, y = x, d = 1;
+        do {
+            x = f(x);
+            y = f(f(y));
+            u64 diff = x > y ? x - y : y - x;
+            d = __gcd(diff, n);
+        } while (d == 1);
+        if (d != n) return d;
+    }
+}
+
+// 分解 n 的所有素因子（含重复）, 放入 res
+void factorize(u64 n, vector<u64>& res) {
+    if (n == 1) return;
+    if (millerRabin(n)) { res.push_back(n); return; }
+    u64 d = n;
+    while (d == n) d = pollardRho(n);
+    factorize(d, res);
+    factorize(n / d, res);
+}
+
+// n 的最大质因子 (典型应用)
+u64 maxPrimeFactor(u64 n) {
+    vector<u64> p; factorize(n, p);
+    return *max_element(p.begin(), p.end());
+}
+```
 
 ### 最大流
 
