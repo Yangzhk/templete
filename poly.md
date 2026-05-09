@@ -1,4 +1,5 @@
 - [NTT 与基础框架](#ntt-与基础框架)
+- [三模数 NTT（精确卷积 / 任意模数）](#三模数-ntt精确卷积--任意模数)
 - [基础运算](#基础运算)
   - [乘法](#乘法)
   - [求导 / 积分](#求导--积分)
@@ -71,6 +72,121 @@ private:
                 a[i] = 1ll * a[i] * inv_limit % mod;
             }
         }
+    }
+```
+
+---
+
+## 三模数 NTT（精确卷积 / 任意模数）
+
+三个 NTT 友好质数，原根均为 $3$：
+
+$$P_1 = 998244353 = 119 \times 2^{23} + 1$$
+$$P_2 = 1004535809 = 479 \times 2^{21} + 1$$
+$$P_3 = 469762049 = 7 \times 2^{26} + 1$$
+
+$P_1 P_2 P_3 \approx 4.7 \times 10^{26}$，结果系数不超此值时精确。分别在三模数下 NTT 卷积，再 CRT 合并得精确整数结果。
+
+```cpp
+    // === 三模数 NTT（追加在 Poly 类内）===
+
+    static const int P1 = 998244353;   // 119 * 2^23 + 1
+    static const int P2 = 1004535809;  // 479 * 2^21 + 1
+    static const int P3 = 469762049;   // 7 * 2^26 + 1
+    static const int G3 = 3;           // 公共原根
+
+    // 任意模数快速幂
+    static int qpow_mod(int a, int k, int p) {
+        int ans = 1;
+        for (; k; a = 1ll * a * a % p, k >>= 1)
+            if (k & 1) ans = 1ll * ans * a % p;
+        return ans;
+    }
+
+    // 单模数 NTT（模数作为参数传入）
+    static void NTT_mod(vector<int>& a, int limit, bool type, int p) {
+        int bit = 0;
+        while ((1 << bit) < limit) bit++;
+        vector<int> rev(limit);
+        for (int i = 0; i < limit; i++)
+            rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (bit - 1));
+        for (int i = 0; i < limit; i++)
+            if (i < rev[i]) swap(a[i], a[rev[i]]);
+
+        for (int mid = 1; mid < limit; mid <<= 1) {
+            int wn = qpow_mod(
+                type ? G3 : qpow_mod(G3, p - 2, p),
+                (p - 1) / (mid << 1), p);
+            for (int j = 0; j < limit; j += (mid << 1)) {
+                int w = 1;
+                for (int k = 0; k < mid; k++, w = 1ll * w * wn % p) {
+                    int x = a[j + k], y = 1ll * w * a[j + k + mid] % p;
+                    a[j + k] = (x + y >= p) ? (x + y - p) : (x + y);
+                    a[j + k + mid] = (x - y < 0) ? (x - y + p) : (x - y);
+                }
+            }
+        }
+
+        if (!type) {
+            int inv_limit = qpow_mod(limit, p - 2, p);
+            for (int i = 0; i < limit; i++)
+                a[i] = 1ll * a[i] * inv_limit % p;
+        }
+    }
+
+    // 单模数卷积
+    static vector<int> conv_mod(const vector<int>& a, const vector<int>& b, int p) {
+        if (a.empty() || b.empty()) return {};
+        int n = (int)a.size(), m = (int)b.size();
+        int limit = 1;
+        while (limit < n + m - 1) limit <<= 1;
+
+        vector<int> A = a, B = b;
+        NTT_mod(A, limit, true, p);
+        NTT_mod(B, limit, true, p);
+        for (int i = 0; i < limit; i++)
+            A[i] = 1ll * A[i] * B[i] % p;
+        NTT_mod(A, limit, false, p);
+
+        A.resize(n + m - 1);
+        return A;
+    }
+
+    // CRT 合并三个余数 → 精确整数 (< P1*P2*P3)
+    static long long crt_merge(int r1, int r2, int r3) {
+        // 合并前两个模数 P1, P2
+        static const int inv_p1_p2 = qpow_mod(P1 % P2, P2 - 2, P2);
+        long long x12 = r1 + 1ll * P1 *
+            (1ll * (r2 - r1 + P2) % P2 * inv_p1_p2 % P2);
+
+        // 合并第三个模数 P3
+        static const long long M12 = 1ll * P1 * P2;
+        static const int inv_m12_p3 = qpow_mod(M12 % P3, P3 - 2, P3);
+        __int128 x = (__int128)x12 +
+            (__int128)M12 * ((r3 - x12 % P3 + P3) % P3 * inv_m12_p3 % P3);
+
+        return (long long)(x % (__int128)(M12 * P3));
+    }
+
+    // 三模数精确卷积 → 返回 long long 系数
+    static vector<long long> conv_exact(const vector<int>& a, const vector<int>& b) {
+        auto c1 = conv_mod(a, b, P1);
+        auto c2 = conv_mod(a, b, P2);
+        auto c3 = conv_mod(a, b, P3);
+        vector<long long> res(c1.size());
+        for (size_t i = 0; i < res.size(); i++)
+            res[i] = crt_merge(c1[i], c2[i], c3[i]);
+        return res;
+    }
+
+    // 任意模数卷积（结果对 arbitrary_mod 取模，用于非 NTT 友好模数）
+    static vector<int> conv_arbitrary(const vector<int>& a, const vector<int>& b,
+                                      int mod) {
+        auto exact = conv_exact(a, b);
+        vector<int> res(exact.size());
+        for (size_t i = 0; i < res.size(); i++)
+            res[i] = exact[i] % mod;
+        return res;
     }
 ```
 
@@ -466,6 +582,8 @@ $O(n)$ 预处理阶乘和前后缀积，$O(n)$ 计算。支持 $k$ 到 $10^{18}$
 | 操作 | 复杂度 | 备注 |
 |------|--------|------|
 | `operator*` | $O(n \log n)$ | NTT 卷积 |
+| `conv_exact` | $O(n \log n)$ | 三模数精确卷积 |
+| `conv_arbitrary` | $O(n \log n)$ | 任意模数卷积 |
 | `deriv` / `integ` | $O(n)$ | 求导 / 积分 |
 | `inv` | $O(n \log n)$ | 牛顿迭代 |
 | `ln` | $O(n \log n)$ | $a[0] = 1$ |
