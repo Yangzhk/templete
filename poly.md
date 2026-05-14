@@ -27,85 +27,67 @@
 
 设计要点：
 
-- `pw` / `inv_mod` 接受任意素数模 `p`，默认 `mod`，消掉原 `qpow` / `qpow_mod` 的重复。
-- `ntt` 用 `bool inv` 表示是否逆变换（true=逆变换，与教科书一致），并以 `p` 为参数，三模数共用。
-- `rev` 数组按当前长度缓存（`thread_local static`），避免每次卷积都重建。
+- `pw` 接受任意素数模 `p`，默认 `mod`。
+- `ntt` 用 `bool inv` 表示逆变换（true=逆），`p` 为模数参数，三模数共用。
+- `rev` 用 `static` 按长度缓存，避免每次卷积重建。
 
 ```cpp
 #include <bits/stdc++.h>
 using namespace std;
 
-class Poly {
-public:
-    static const int mod = 998244353;
-    static const int G   = 3;
+struct Poly {
+    static const int mod = 998244353, G = 3, G_inv = 332748118;
 
     vector<int> a;
 
     Poly() = default;
     Poly(vector<int> v) : a(move(v)) {}
-    Poly(initializer_list<int> il) : a(il) {}
 
-    int  size() const          { return (int)a.size(); }
-    void resize(int n)         { a.resize(n, 0); }
-    int& operator[](int i)     { return a[i]; }
-    int  operator[](int i) const { return i < size() ? a[i] : 0; }
+    int size() const { return (int)a.size(); }
+    void resize(int n) { a.resize(n, 0); }
+    int& operator[](int i) { return a[i]; }
+    int operator[](int i) const { return i < size() ? a[i] : 0; }
 
-    // 模幂：默认模数 mod，三模数 NTT 时传入 p
     static int pw(int x, long long k, int p = mod) {
-        int r = 1; x = ((x % p) + p) % p;
+        int r = 1; x = (x % p + p) % p;
         for (; k; x = 1ll * x * x % p, k >>= 1)
             if (k & 1) r = 1ll * r * x % p;
         return r;
     }
     static int inv_mod(int x, int p = mod) { return pw(x, p - 2, p); }
 
-private:
-    static int next_pow2(int x) { int n = 1; while (n < x) n <<= 1; return n; }
-
-    // 缓存 rev，长度变化时重建
-    static const vector<int>& rev_buf(int n) {
-        static thread_local vector<int> rev;
-        static thread_local int last = -1;
+    static void ntt(vector<int> &a, int n, bool inv, int p = mod) {
+        a.resize(n, 0);
+        static vector<int> rev; static int last = -1;
         if (last != n) {
-            rev.assign(n, 0);
+            rev.resize(n); last = n;
             for (int i = 1; i < n; i++)
                 rev[i] = (rev[i >> 1] >> 1) | ((i & 1) ? n >> 1 : 0);
-            last = n;
         }
-        return rev;
-    }
-
-public:
-    // n 必须为 2 的幂；inv=true 即逆变换
-    static void ntt(vector<int>& a, int n, bool inv, int p = mod, int g = G) {
-        a.resize(n, 0);
-        const auto& rev = rev_buf(n);
         for (int i = 0; i < n; i++)
             if (i < rev[i]) swap(a[i], a[rev[i]]);
         for (int m = 1; m < n; m <<= 1) {
-            int wn = pw(inv ? inv_mod(g, p) : g, (p - 1) / (m << 1), p);
-            for (int j = 0; j < n; j += m << 1) {
+            int wn = pw(inv ? G_inv : G, (p - 1) / (m << 1), p);
+            for (int i = 0; i < n; i += m << 1) {
                 int w = 1;
-                for (int k = 0; k < m; k++, w = 1ll * w * wn % p) {
-                    int x = a[j + k], y = 1ll * w * a[j + k + m] % p;
-                    a[j + k]     = (x + y) % p;
-                    a[j + k + m] = (x - y + p) % p;
+                for (int j = 0; j < m; j++, w = 1ll * w * wn % p) {
+                    int x = a[i + j], y = 1ll * w * a[i + j + m] % p;
+                    a[i + j] = (x + y) >= p ? x + y - p : x + y;
+                    a[i + j + m] = (x - y + p) >= p ? x - y : x - y + p;
                 }
             }
         }
         if (inv) {
             int iv = inv_mod(n, p);
-            for (int& x : a) x = 1ll * x * iv % p;
+            for (int &x : a) x = 1ll * x * iv % p;
         }
     }
 
-    // 单模数卷积：A * B (mod p)，p 必须 NTT 友好
-    static vector<int> mul_p(vector<int> A, vector<int> B, int p) {
+    static vector<int> mul_p(vector<int> A, vector<int> B, int p = mod) {
         if (A.empty() || B.empty()) return {};
-        int len = (int)A.size() + (int)B.size() - 1, n = next_pow2(len);
-        ntt(A, n, false, p);
-        ntt(B, n, false, p);
+        int len = (int)A.size() + (int)B.size() - 1, n = 1;
+        while (n < len) n <<= 1;
+        ntt(A, n, false, p); ntt(B, n, false, p);
         for (int i = 0; i < n; i++) A[i] = 1ll * A[i] * B[i] % p;
         ntt(A, n, true, p);
         A.resize(len);
@@ -127,169 +109,47 @@ $P_1 P_2 P_3 \approx 4.7 \times 10^{26}$。`mul_exact` 假设结果 $< 2^{63}$ �
 
 ```cpp
     // === 三模数 NTT ===
-    static const int P1 = 998244353;   // 119 * 2^23 + 1
-    static const int P2 = 1004535809;  // 479 * 2^21 + 1
-    static const int P3 = 469762049;   // 7  * 2^26 + 1
+    static const int P1 = 998244353, P2 = 1004535809, P3 = 469762049;
 
-    // 三模数 CRT → 直接对 p 取模（任意模数 NTT 用，避免大整数中转）
-    static int crt3_mod(int r1, int r2, int r3, int p) {
-        static const int  iv12  = inv_mod(P1 % P2, P2);
+    // CRT 合并三个模数 → 对 p 取模
+    static int crt_mod(int r1, int r2, int r3, int p) {
+        static const int i12 = inv_mod(P1 % P2, P2);
         static const long long M12 = 1ll * P1 * P2;
-        static const int  iv123 = inv_mod((int)(M12 % P3), P3);
-        long long t12  = 1ll * ((r2 - r1) % P2 + P2) % P2 * iv12 % P2;
-        long long x12  = r1 + P1 * t12;                       // < P1*P2 < 2^60
-        long long t123 = ((r3 - x12 % P3) % P3 + P3) % P3 * iv123 % P3;
-        return (int)((x12 % p + (M12 % p) * t123 % p) % p);
+        static const int i123 = inv_mod((int)(M12 % P3), P3);
+        long long t1 = 1ll * ((r2 - r1) % P2 + P2) % P2 * i12 % P2;
+        long long x = r1 + P1 * t1;
+        long long t2 = ((r3 - x % P3) % P3 + P3) % P3 * i123 % P3;
+        return (int)((x % p + (M12 % p) * t2 % p) % p);
     }
 
-    // 三模数 CRT → 精确整数（要求结果 < 2^63）
-    static long long crt3(int r1, int r2, int r3) {
-        static const int  iv12  = inv_mod(P1 % P2, P2);
+    // CRT 合并三个模数 → 精确整数（结果 < 2^63）
+    static long long crt(ll r1, ll r2, ll r3) {
+        static const int i12 = inv_mod(P1 % P2, P2);
         static const long long M12 = 1ll * P1 * P2;
-        static const int  iv123 = inv_mod((int)(M12 % P3), P3);
-        long long t12  = 1ll * ((r2 - r1) % P2 + P2) % P2 * iv12 % P2;
-        long long x12  = r1 + P1 * t12;
-        long long t123 = ((r3 - x12 % P3) % P3 + P3) % P3 * iv123 % P3;
-        return x12 + M12 * t123;
+        static const int i123 = inv_mod((int)(M12 % P3), P3);
+        long long t1 = 1ll * ((r2 - r1) % P2 + P2) % P2 * i12 % P2;
+        long long x = r1 + P1 * t1;
+        long long t2 = ((r3 - x % P3) % P3 + P3) % P3 * i123 % P3;
+        return x + M12 * t2;
     }
 
-    // 任意模数卷积（p 可非 NTT 友好）
-    static vector<int> mul_any(const vector<int>& a, const vector<int>& b, int p) {
-        auto c1 = mul_p(a, b, P1);
-        auto c2 = mul_p(a, b, P2);
-        auto c3 = mul_p(a, b, P3);
+    static vector<int> mul_any(const vector<int> &a, const vector<int> &b, int p) {
+        auto c1 = mul_p(a, b, P1), c2 = mul_p(a, b, P2), c3 = mul_p(a, b, P3);
         vector<int> r(c1.size());
         for (int i = 0; i < (int)r.size(); i++)
-            r[i] = crt3_mod(c1[i], c2[i], c3[i], p);
+            r[i] = crt_mod(c1[i], c2[i], c3[i], p);
         return r;
     }
 
-    // 精确卷积，结果系数需 < 2^63
-    static vector<long long> mul_exact(const vector<int>& a, const vector<int>& b) {
-        auto c1 = mul_p(a, b, P1);
-        auto c2 = mul_p(a, b, P2);
-        auto c3 = mul_p(a, b, P3);
+    static vector<long long> mul_exact(const vector<int> &a, const vector<int> &b) {
+        auto c1 = mul_p(a, b, P1), c2 = mul_p(a, b, P2), c3 = mul_p(a, b, P3);
         vector<long long> r(c1.size());
         for (int i = 0; i < (int)r.size(); i++)
-            r[i] = crt3(c1[i], c2[i], c3[i]);
+            r[i] = crt(c1[i], c2[i], c3[i]);
         return r;
     }
 ```
 
----
-
-## 三模数 NTT（精确卷积 / 任意模数）
-
-三个 NTT 友好质数，原根均为 $3$：
-
-$$P_1 = 998244353 = 119 \times 2^{23} + 1$$
-$$P_2 = 1004535809 = 479 \times 2^{21} + 1$$
-$$P_3 = 469762049 = 7 \times 2^{26} + 1$$
-
-$P_1 P_2 P_3 \approx 4.7 \times 10^{26}$，结果系数不超此值时精确。分别在三模数下 NTT 卷积，再 CRT 合并得精确整数结果。
-
-```cpp
-    // === 三模数 NTT（追加在 Poly 类内）===
-
-    static const int P1 = 998244353;   // 119 * 2^23 + 1
-    static const int P2 = 1004535809;  // 479 * 2^21 + 1
-    static const int P3 = 469762049;   // 7 * 2^26 + 1
-    static const int G3 = 3;           // 公共原根
-
-    // 任意模数快速幂
-    static int qpow_mod(int a, int k, int p) {
-        int ans = 1;
-        for (; k; a = 1ll * a * a % p, k >>= 1)
-            if (k & 1) ans = 1ll * ans * a % p;
-        return ans;
-    }
-
-    // 单模数 NTT（模数作为参数传入）
-    static void NTT_mod(vector<int>& a, int limit, bool type, int p) {
-        int bit = 0;
-        while ((1 << bit) < limit) bit++;
-        vector<int> rev(limit);
-        for (int i = 0; i < limit; i++)
-            rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (bit - 1));
-        for (int i = 0; i < limit; i++)
-            if (i < rev[i]) swap(a[i], a[rev[i]]);
-
-        for (int mid = 1; mid < limit; mid <<= 1) {
-            int wn = qpow_mod(
-                type ? G3 : qpow_mod(G3, p - 2, p),
-                (p - 1) / (mid << 1), p);
-            for (int j = 0; j < limit; j += (mid << 1)) {
-                int w = 1;
-                for (int k = 0; k < mid; k++, w = 1ll * w * wn % p) {
-                    int x = a[j + k], y = 1ll * w * a[j + k + mid] % p;
-                    a[j + k] = (x + y >= p) ? (x + y - p) : (x + y);
-                    a[j + k + mid] = (x - y < 0) ? (x - y + p) : (x - y);
-                }
-            }
-        }
-
-        if (!type) {
-            int inv_limit = qpow_mod(limit, p - 2, p);
-            for (int i = 0; i < limit; i++)
-                a[i] = 1ll * a[i] * inv_limit % p;
-        }
-    }
-
-    // 单模数卷积
-    static vector<int> conv_mod(const vector<int>& a, const vector<int>& b, int p) {
-        if (a.empty() || b.empty()) return {};
-        int n = (int)a.size(), m = (int)b.size();
-        int limit = 1;
-        while (limit < n + m - 1) limit <<= 1;
-
-        vector<int> A = a, B = b;
-        NTT_mod(A, limit, true, p);
-        NTT_mod(B, limit, true, p);
-        for (int i = 0; i < limit; i++)
-            A[i] = 1ll * A[i] * B[i] % p;
-        NTT_mod(A, limit, false, p);
-
-        A.resize(n + m - 1);
-        return A;
-    }
-
-    // CRT 合并三个余数 → 精确整数 (< P1*P2*P3)
-    static long long crt_merge(int r1, int r2, int r3) {
-        // 合并前两个模数 P1, P2
-        static const int inv_p1_p2 = qpow_mod(P1 % P2, P2 - 2, P2);
-        long long x12 = r1 + 1ll * P1 *
-            (1ll * (r2 - r1 + P2) % P2 * inv_p1_p2 % P2);
-
-        // 合并第三个模数 P3
-        static const long long M12 = 1ll * P1 * P2;
-        static const int inv_m12_p3 = qpow_mod(M12 % P3, P3 - 2, P3);
-        __int128 x = (__int128)x12 +
-            (__int128)M12 * ((r3 - x12 % P3 + P3) % P3 * inv_m12_p3 % P3);
-
-        return (long long)(x % (__int128)(M12 * P3));
-    }
-
-    // 三模数精确卷积 → 返回 long long 系数
-    static vector<long long> conv_exact(const vector<int>& a, const vector<int>& b) {
-        auto c1 = conv_mod(a, b, P1);
-        auto c2 = conv_mod(a, b, P2);
-        auto c3 = conv_mod(a, b, P3);
-        vector<long long> res(c1.size());
-        for (size_t i = 0; i < res.size(); i++)
-            res[i] = crt_merge(c1[i], c2[i], c3[i]);
-        return res;
-    }
-
-    // 任意模数卷积（结果对 arbitrary_mod 取模，用于非 NTT 友好模数）
-    static vector<int> conv_arbitrary(const vector<int>& a, const vector<int>& b,
-                                      int mod) {
-        auto exact = conv_exact(a, b);
-        vector<int> res(exact.size());
-        for (size_t i = 0; i < res.size(); i++)
-            res[i] = exact[i] % mod;
-        return res;
-    }
-```
 
 ---
 
@@ -298,22 +158,18 @@ $P_1 P_2 P_3 \approx 4.7 \times 10^{26}$，结果系数不超此值时精确。�
 ### 加 / 减 / 乘
 
 ```cpp
-    Poly operator+(const Poly& rhs) const {
-        Poly r; r.a.assign(max(size(), rhs.size()), 0);
-        for (int i = 0; i < r.size(); i++)
-            r.a[i] = ((*this)[i] + rhs[i]) % mod;
+    Poly operator+(const Poly &b) const {
+        Poly r; r.a.resize(max(size(), b.size()));
+        for (int i = 0; i < r.size(); i++) r[i] = ((*this)[i] + b[i]) % mod;
         return r;
     }
-    Poly operator-(const Poly& rhs) const {
-        Poly r; r.a.assign(max(size(), rhs.size()), 0);
-        for (int i = 0; i < r.size(); i++)
-            r.a[i] = ((*this)[i] - rhs[i] + mod) % mod;
+    Poly operator-(const Poly &b) const {
+        Poly r; r.a.resize(max(size(), b.size()));
+        for (int i = 0; i < r.size(); i++) r[i] = ((*this)[i] - b[i] + mod) % mod;
         return r;
     }
-    Poly operator*(const Poly& rhs) const {
-        return Poly(mul_p(a, rhs.a, mod));
-    }
-    Poly& operator*=(const Poly& rhs) { return *this = *this * rhs; }
+    Poly operator*(const Poly &b) const { return Poly(mul_p(a, b.a)); }
+    Poly &operator*=(const Poly &b) { return *this = *this * b; }
 ```
 
 ### 求导 / 积分
@@ -445,51 +301,46 @@ $$
 `pow_core` 抽出 `(km, kp)` 共用主体，整数版与字符串版（用于 $k$ 极大）共用。$a[0] = 0$ 的情况通过提取 $x^{\text{shift}}$ 因子递归处理。
 
 ```cpp
-private:
-    // a[0] != 0：F^k = a0^kp * exp(km * ln(F / a0)),  km = k mod p, kp = k mod (p-1)
     Poly pow_core(int n, long long km, long long kp) const {
-        int iv = inv_mod(a[0]);
-        int a0k = pw(a[0], kp);
-        Poly q; q.a.assign(size(), 0);
-        for (int i = 0; i < size(); i++) q.a[i] = 1ll * a[i] * iv % mod;
-        Poly L = q.ln(n);
-        for (int& x : L.a) x = 1ll * x * km % mod;
-        Poly r = L.exp(n);
-        for (int& x : r.a) x = 1ll * x * a0k % mod;
-        return r;
+        int iv = inv_mod(a[0]), a0k = pw(a[0], kp);
+        Poly q; q.a.resize(size());
+        for (int i = 0; i < size(); i++) q[i] = 1ll * a[i] * iv % mod;
+        q = q.ln(n);
+        for (int &x : q.a) x = 1ll * x * km % mod;
+        q = q.exp(n);
+        for (int &x : q.a) x = 1ll * x * a0k % mod;
+        return q;
     }
 
-public:
-    // F^k, k 较小（fits long long）
+    // k 较小时
     Poly pow(int n, long long k) const {
         if (n <= 0) return Poly();
-        if (k == 0) { Poly r; r.a.assign(n, 0); r.a[0] = 1; return r; }
+        if (k == 0) { Poly r; r.a.assign(n, 0); r[0] = 1; return r; }
         int s = 0;
         while (s < size() && a[s] == 0) s++;
         if (s == size()) { Poly r; r.a.assign(n, 0); return r; }
         if (s > 0) {
             if ((__int128)s * k >= n) { Poly r; r.a.assign(n, 0); return r; }
             int sk = (int)(s * k);
-            vector<int> q(size() - s);
-            for (int i = 0; i + s < size(); i++) q[i] = a[i + s];
+            vector<int> q(a.begin() + s, a.end());
             Poly p = Poly(move(q)).pow(n - sk, k);
             Poly r; r.a.assign(n, 0);
-            for (int i = 0; i < p.size() && i + sk < n; i++) r.a[i + sk] = p[i];
+            for (int i = 0; i < p.size() && i + sk < n; i++) r[i + sk] = p[i];
             return r;
         }
         return pow_core(n, k % mod, k % (mod - 1));
     }
 
-    // F^k, k 极大（十进制字符串）
-    Poly pow(int n, const string& s) const {
+    // k 极大（字符串）
+    Poly pow(int n, const string &s) const {
         if (n <= 0) return Poly();
         bool zero = true;
         for (char c : s) if (c != '0') { zero = false; break; }
-        if (zero) { Poly r; r.a.assign(n, 0); r.a[0] = 1; return r; }
+        if (zero) { Poly r; r.a.assign(n, 0); r[0] = 1; return r; }
         long long km = 0, kp = 0;
         for (char c : s) {
-            km = (km * 10 + (c - '0')) % mod;
-            kp = (kp * 10 + (c - '0')) % (mod - 1);
+            km = (km * 10 + c - '0') % mod;
+            kp = (kp * 10 + c - '0') % (mod - 1);
         }
         int sh = 0;
         while (sh < size() && a[sh] == 0) sh++;
@@ -511,8 +362,7 @@ $$F^R(x) \equiv Q^R(x) \cdot G^R(x) \pmod{x^{n-m+1}}$$
 故 $Q^R = F^R \cdot (G^R)^{-1} \bmod x^{n-m+1}$，反转得 $Q$，再 $R = F - QG$。
 
 ```cpp
-    // 返回 (Q, R)：F = Q*G + R, deg R < deg G。要求 G 末项非零
-    pair<Poly, Poly> divmod(const Poly& g) const {
+    pair<Poly, Poly> divmod(const Poly &g) const {
         int n = size(), m = g.size();
         if (n < m) return {Poly(), *this};
         int qd = n - m + 1;
@@ -522,11 +372,11 @@ $$F^R(x) \equiv Q^R(x) \cdot G^R(x) \pmod{x^{n-m+1}}$$
         q.resize(qd);
         reverse(q.a.begin(), q.a.end());
         Poly r = *this - q * g;
-        r.resize(max(0, m - 1));
+        r.resize(m - 1);
         return {q, r};
     }
-    Poly operator/(const Poly& g) const { return divmod(g).first; }
-    Poly operator%(const Poly& g) const { return divmod(g).second; }
+    Poly operator/(const Poly &g) const { return divmod(g).first; }
+    Poly operator%(const Poly &g) const { return divmod(g).second; }
 ```
 
 ---
@@ -540,27 +390,20 @@ $$
 把 $A_i = a_i i!$ 翻转后与 $C_k = c^k / k!$ 卷积，结果在 $n - 1 - j$ 处除以 $j!$ 即得。整体 $O(n \log n)$。
 
 ```cpp
-    // f(x + c)，长度保持 n
+    // f(x + c)
     Poly shift(int c) const {
         int n = size();
-        if (n == 0) return Poly();
-        c = ((c % mod) + mod) % mod;
-
-        vector<int> fac(n), ifac(n);
+        if (!n) return Poly();
+        c = (c % mod + mod) % mod;
+        vector<int> fac(n), ifac(n), A(n), C(n), r(n);
         fac[0] = 1;
         for (int i = 1; i < n; i++) fac[i] = 1ll * fac[i - 1] * i % mod;
         ifac[n - 1] = inv_mod(fac[n - 1]);
         for (int i = n - 2; i >= 0; i--) ifac[i] = 1ll * ifac[i + 1] * (i + 1) % mod;
-
-        vector<int> A(n), C(n);
         for (int i = 0; i < n; i++) A[n - 1 - i] = 1ll * a[i] * fac[i] % mod;
-        int ck = 1;
-        for (int k = 0; k < n; k++) {
-            C[k] = 1ll * ck * ifac[k] % mod;
-            ck   = 1ll * ck * c % mod;
-        }
-        auto h = mul_p(A, C, mod);
-        vector<int> r(n);
+        for (int i = 0, ck = 1; i < n; i++, ck = 1ll * ck * c % mod)
+            C[i] = 1ll * ck * ifac[i] % mod;
+        auto h = mul_p(A, C);
         for (int j = 0; j < n; j++) r[j] = 1ll * h[n - 1 - j] * ifac[j] % mod;
         return Poly(move(r));
     }
@@ -573,7 +416,6 @@ $$
 给定 $n$ 个 $x_i$，对度 $< n$ 的 $f$ 求 $f(x_i)$。在线段树上维护 $T_u(x) = \prod_{i \in u}(x - x_i)$，递归时令 $f \leftarrow f \bmod T_u$，叶子处即 $f(x_i)$。复杂度 $O(n \log^2 n)$。
 
 ```cpp
-private:
     static void mpe_build(vector<Poly>& tr, int u, int l, int r,
                           const vector<int>& xs) {
         if (l == r) { tr[u] = Poly({(mod - xs[l]) % mod, 1}); return; }
@@ -591,8 +433,7 @@ private:
         mpe_query(tr, u << 1 | 1, m + 1, r, f, res);
     }
 
-public:
-    vector<int> multi_eval(const vector<int>& xs) const {
+    vector<int> multi_eval(const vector<int> &xs) const {
         int n = xs.size();
         if (n == 0) return {};
         vector<Poly> tr(4 * n);
@@ -616,7 +457,6 @@ $$
 用多点求值算 $d_i = M'(x_i)$，再分治合并 $\frac{y_i}{d_i}$ 与子树乘积。复杂度 $O(n \log^2 n)$。
 
 ```cpp
-private:
     static Poly intp_solve(const vector<Poly>& tr, int u, int l, int r,
                            const vector<int>& ys, const vector<int>& d) {
         if (l == r) return Poly({(int)(1ll * ys[l] * inv_mod(d[l]) % mod)});
@@ -625,8 +465,7 @@ private:
              + intp_solve(tr, u << 1 | 1, m + 1, r, ys, d) * tr[u << 1];
     }
 
-public:
-    static Poly fast_interp(const vector<int>& xs, const vector<int>& ys) {
+    static Poly fast_interp(const vector<int> &xs, const vector<int> &ys) {
         int n = xs.size();
         if (n == 0) return Poly();
         vector<Poly> tr(4 * n);
@@ -863,30 +702,3 @@ vector<int> subset_conv(const vector<int>& f, const vector<int>& g) {
     return r;
 }
 ```
-
----
-
-## 复杂度总结
-
-| 操作 | 复杂度 | 备注 |
-|------|--------|------|
-| `operator+` / `operator-` | $O(n)$ | 系数加减 |
-| `operator*` | $O(n \log n)$ | NTT 卷积 |
-| `mul_exact` | $O(n \log n)$ | 三模数精确卷积，结果 $< 2^{63}$ |
-| `mul_any` | $O(n \log n)$ | 任意模数卷积，CRT 直接对 $p$ 取模 |
-| `deriv` / `integ` | $O(n)$ | 求导 / 积分（积分用线性逆元） |
-| `inv` | $O(n \log n)$ | 牛顿迭代，要求 $a[0] \ne 0$ |
-| `ln` | $O(n \log n)$ | 要求 $a[0] = 1$ |
-| `exp` | $O(n \log n)$ | 要求 $a[0] = 0$ |
-| `sqrt` | $O(n \log n)$ | 要求 $a[0] = 1$ |
-| `pow` | $O(n \log n)$ | 自动处理 $a[0] = 0$，支持 `string` 形式的极大 $k$ |
-| `divmod` / `operator/` / `operator%` | $O(n \log n)$ | 依赖系数翻转 + 求逆 |
-| `shift` | $O(n \log n)$ | $f(x + c)$，单次卷积 |
-| `multi_eval` | $O(n \log^2 n)$ | 分治线段树 + 取模 |
-| `fast_interp` | $O(n \log^2 n)$ | 多点求值 + 分治合并 |
-| `linear_recur` | $O(k \log k \log n)$ | Bostan–Mori，$n \le 10^{18}$ |
-| `eval` | $O(n)$ | 霍纳法 |
-| `lagrange` | $O(n^2)$ | 一般插值，小规模 |
-| `lagrange_continuous` | $O(n)$ | 连续点值，$k$ 任意 |
-| `fwt_or` / `fwt_and` / `fwt_xor` | $O(n \log n)$ | 位运算卷积，$n = 2^k$ |
-| `subset_conv` | $O(2^n n^2)$ | 不相交子集卷积 |
