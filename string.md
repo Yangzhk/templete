@@ -1,23 +1,31 @@
-# String Algorithms Template for Competitive Programming
+# 字符串算法模板
 
-## 0. Fast I/O & Utility
+## 目录
 
-```cpp
-#include <bits/stdc++.h>
-using namespace std;
-using ll = long long;
-using ull = unsigned long long;
-#define all(x) begin(x), end(x)
-#define sz(x) (int)(x).size()
-```
+- [字符串算法模板](#字符串算法模板)
+  - [目录](#目录)
+  - [1. 字符串哈希](#1-字符串哈希)
+  - [2. KMP — 前缀函数 / 模式匹配](#2-kmp--前缀函数--模式匹配)
+  - [3. Z 函数](#3-z-函数)
+  - [4. 字典树](#4-字典树)
+  - [5. AC 自动机](#5-ac-自动机)
+  - [6. Manacher 算法 — 回文](#6-manacher-算法--回文)
+  - [7. 后缀数组 - O(n log n)](#7-后缀数组---on-log-n)
+  - [8. 后缀自动机 (SAM) — O(nA)](#8-后缀自动机-sam--ona)
+  - [9. 最长公共子序列 (LCS) — DP](#9-最长公共子序列-lcs--dp)
+  - [10. 最小循环表示 (Booth 算法)](#10-最小循环表示-booth-算法)
+  - [11. Lyndon 分解 (Duval 算法)](#11-lyndon-分解-duval-算法)
+  - [12. 编辑距离 (Levenshtein)](#12-编辑距离-levenshtein)
+  - [13. 回文树 / Eertree — O(nA)](#13-回文树--eertree--ona)
+  - [14. 常用字符串工具](#14-常用字符串工具)
 
 ---
 
-## 1. String Hashing (Rolling Hash)
+## 1. 字符串哈希
 
 ```cpp
-template<int MOD, int BASE>
 struct Hash {
+    static constexpr int MOD = 1'000'000'007, BASE = 911382323;
     int n;
     vector<ll> h, p;
     Hash(const string &s) : n(sz(s)), h(n + 1), p(n + 1) {
@@ -33,21 +41,34 @@ struct Hash {
     }
 };
 
-using SingleHash = Hash<1'000'000'007, 911382323>;
-
 // 双哈希：两套 (MOD, BASE) 组合，几乎不可能冲突
-struct DoubleHash {
+struct Hash2 {
+    static constexpr int MOD = 1'000'000'009, BASE = 972663749;
     int n;
-    Hash<1'000'000'007, 911382323> h1;
-    Hash<1'000'000'009, 972663749> h2;
-    DoubleHash(const string &s) : n(sz(s)), h1(s), h2(s) {}
+    vector<ll> h, p;
+    Hash2(const string &s) : n(sz(s)), h(n + 1), p(n + 1) {
+        p[0] = 1;
+        for (int i = 0; i < n; i++) {
+            p[i+1] = p[i] * BASE % MOD;
+            h[i+1] = (h[i] * BASE + s[i]) % MOD;
+        }
+    }
+    ll get(int l, int r) const {
+        return (h[r] - h[l] * p[r-l] % MOD + MOD) % MOD;
+    }
+};
+
+struct DoubleHash {
+    Hash h1;
+    Hash2 h2;
+    DoubleHash(const string &s) : h1(s), h2(s) {}
     pair<ll,ll> get(int l, int r) const { return {h1.get(l, r), h2.get(l, r)}; }
 };
 ```
 
 ---
 
-## 2. KMP — Prefix Function / Pattern Matching
+## 2. KMP — 前缀函数 / 模式匹配
 
 ```cpp
 // pi[i] = s[0..i] 最长真前缀 = 后缀的长度
@@ -97,7 +118,7 @@ vector<int> min_borders(const string &s) {
 
 ---
 
-## 3. Z-Function
+## 3. Z 函数
 
 ```cpp
 // z[i] = s 与 s[i..] 的最长公共前缀长度
@@ -115,7 +136,7 @@ vector<int> z_function(const string &s) {
 
 ---
 
-## 4. Trie
+## 4. 字典树
 
 ```cpp
 struct Trie {
@@ -154,7 +175,7 @@ struct Trie {
 
 ---
 
-## 5. Aho-Corasick Automaton
+## 5. AC 自动机
 
 ```cpp
 struct AhoCorasick {
@@ -216,7 +237,7 @@ struct AhoCorasick {
 
 ---
 
-## 6. Manacher's Algorithm — Palindromes
+## 6. Manacher 算法 — 回文
 
 把 s 变换为 `^#a#b#c#$`，所有奇/偶回文都变成变换串中的奇回文。
 **`d[i]` 直接为以 t[i] 为中心的原回文长度**。
@@ -245,59 +266,67 @@ vector<int> manacher(const string &s) {
 
 ---
 
-## 7. Suffix Array — O(n log² n)
+## 7. 后缀数组 - O(n log n)
 
-```cpp
-struct SuffixArray {
-    int n;
-    string s;
-    vector<int> sa, rk, lcp; // lcp[i] = LCP(sa[i], sa[i+1])
+```
+const int MAXN = 1000005; // 根据题目需求调整最大长度
 
-    SuffixArray(const string &_s) : n(sz(_s)), s(_s) {
-        string t = s + char(0);
-        int N = n + 1;
-        sa.resize(N); iota(all(sa), 0);
-        sort(all(sa), [&](int i, int j) { return t[i] < t[j]; });
-        rk.assign(N, 0);
-        for (int i = 1; i < N; i++)
-            rk[sa[i]] = rk[sa[i-1]] + (t[sa[i]] != t[sa[i-1]]);
+int sa[MAXN];      // sa[i]: 排名为 i 的后缀起始位置
+int rk[MAXN];      // rk[i]: 起始位置为 i 的后缀的排名
+int oldrk[MAXN<<1]; // 辅助数组，空间需两倍防止越界
+int tmp[MAXN];     // 第二关键字排序辅助
+int cnt[MAXN];     // 基数排序计数数组
+int height[MAXN];  // height[i]: sa[i] 和 sa[i-1] 的最长公共前缀 (LCP)
 
-        for (int k = 1; k < N && rk[sa[N-1]] < N - 1; k <<= 1) {
-            auto cmp = [&](int i, int j) {
-                if (rk[i] != rk[j]) return rk[i] < rk[j];
-                int ri = i + k < N ? rk[i+k] : -1;
-                int rj = j + k < N ? rk[j+k] : -1;
-                return ri < rj;
-            };
-            sort(all(sa), cmp);
-            vector<int> nrk(N);
-            for (int i = 1; i < N; i++)
-                nrk[sa[i]] = nrk[sa[i-1]] + cmp(sa[i-1], sa[i]);
-            rk = move(nrk);
+void build_sa(const string& s) {
+    int n = s.length();
+    int m = 127; // 字符集大小（初始为 ASCII 范围）
+
+    // 初始基数排序（针对单个字符）
+    for (int i = 1; i <= n; i++) cnt[rk[i] = s[i - 1]]++;
+    for (int i = 1; i <= m; i++) cnt[i] += cnt[i - 1];
+    for (int i = n; i >= 1; i--) sa[cnt[rk[i]]--] = i;
+
+    // w 为当前已排序的长度，下次比较 2w 长度
+    for (int w = 1, p = 0; w < n; w <<= 1, m = p) {
+        // 1. 对第二关键字排序
+        p = 0;
+        for (int i = n - w + 1; i <= n; i++) tmp[++p] = i; // 后面没有 w 长度的后缀排名最小
+        for (int i = 1; i <= n; i++) {
+            if (sa[i] > w) tmp[++p] = sa[i] - w;
         }
-        sa.erase(sa.begin()); // 去掉哨兵
 
-        // Kasai 求 LCP
-        if (n > 1) lcp.assign(n - 1, 0);
-        rk.assign(n, 0);
-        for (int i = 0; i < n; i++) rk[sa[i]] = i;
-        for (int i = 0, k = 0; i < n; i++) {
-            if (rk[i] == 0) { k = 0; continue; }
-            int j = sa[rk[i] - 1];
-            while (i + k < n && j + k < n && s[i+k] == s[j+k]) k++;
-            lcp[rk[i] - 1] = k;
-            if (k) k--;
+        // 2. 对第一关键字基数排序
+        for (int i = 1; i <= m; i++) cnt[i] = 0;
+        for (int i = 1; i <= n; i++) cnt[rk[i]]++;
+        for (int i = 1; i <= m; i++) cnt[i] += cnt[i - 1];
+        for (int i = n; i >= 1; i--) sa[cnt[rk[tmp[i]]]--] = tmp[i];
+
+        // 3. 更新 rk 数组，根据双关键字判断是否重复
+        for (int i = 1; i <= n; i++) oldrk[i] = rk[i];
+        p = 0;
+        for (int i = 1; i <= n; i++) {
+            if (oldrk[sa[i]] == oldrk[sa[i - 1]] && oldrk[sa[i] + w] == oldrk[sa[i - 1] + w])
+                rk[sa[i]] = p;
+            else
+                rk[sa[i]] = ++p;
         }
+        if (p == n) break; // 已全部排序完成
     }
+}
 
-    // 后缀 i 与 j 的 LCP（暴力 min，配合 RMQ 可优化为 O(1)）
-    int get_lcp(int i, int j) const {
-        if (i == j) return n - i;
-        int a = rk[i], b = rk[j];
-        if (a > b) swap(a, b);
-        return *min_element(lcp.begin() + a, lcp.begin() + b);
+void build_height(const string& s) {
+    int n = s.length();
+    int k = 0;
+    // LCP 性质: height[rk[i]] >= height[rk[i-1]] - 1
+    for (int i = 1; i <= n; i++) {
+        if (rk[i] == 1) continue;
+        if (k) k--;
+        int j = sa[rk[i] - 1];
+        while (i + k <= n && j + k <= n && s[i + k - 1] == s[j + k - 1]) k++;
+        height[rk[i]] = k;
     }
-};
+}
 ```
 
 **应用：**
@@ -308,7 +337,7 @@ struct SuffixArray {
 
 ---
 
-## 8. Suffix Automaton (SAM) — O(n A)
+## 8. 后缀自动机 (SAM) — O(nA)
 
 ```cpp
 struct SAM {
@@ -376,7 +405,7 @@ struct SAM {
 
 ---
 
-## 9. Longest Common Subsequence (LCS) — DP
+## 9. 最长公共子序列 (LCS) — DP
 
 ```cpp
 int lcs(const string &a, const string &b) {
@@ -395,7 +424,7 @@ int lcs(const string &a, const string &b) {
 
 ---
 
-## 10. Lexicographically Minimal Rotation (Booth's Algorithm)
+## 10. 最小循环表示 (Booth 算法)
 
 ```cpp
 // 最小循环表示的起始下标
@@ -417,7 +446,7 @@ int min_rotation(const string &s) {
 
 ---
 
-## 11. Lyndon Factorization (Duval's Algorithm)
+## 11. Lyndon 分解 (Duval 算法)
 
 ```cpp
 // 把 s 划分为若干 Lyndon 串
@@ -441,7 +470,7 @@ vector<string> lyndon_factorize(const string &s) {
 
 ---
 
-## 12. Edit Distance (Levenshtein)
+## 12. 编辑距离 (Levenshtein)
 
 ```cpp
 int edit_distance(const string &a, const string &b) {
@@ -461,7 +490,7 @@ int edit_distance(const string &a, const string &b) {
 
 ---
 
-## 13. Palindrome Tree / Eertree — O(n A)
+## 13. 回文树 / Eertree — O(nA)
 
 ```cpp
 struct PalindromeTree {
@@ -517,7 +546,7 @@ struct PalindromeTree {
 
 ---
 
-## 14. Common String Utilities
+## 14. 常用字符串工具
 
 ```cpp
 // t 是否为 s 的子序列
@@ -555,35 +584,3 @@ bool substring_less(const H &h, const string &s,
     return s[l1 + lo] < s[l2 + lo];
 }
 ```
-
----
-
-## Complexity Summary
-
-| Algorithm | Build Time | Query/Match | Memory |
-| --------- | ---------- | ----------- | ------ |
-| Hashing | O(n) | O(1) | O(n) |
-| KMP | O(n) | O(n+m) | O(n) |
-| Z-Function | O(n) | O(n+m) | O(n) |
-| Trie | O(sum\|s\|) | O(\|s\|) | O(sum\|s\| · A) |
-| Aho-Corasick | O(sum\|p\|) | O(\|t\| + #matches) | O(sum\|p\| · A) |
-| Manacher | O(n) | — | O(n) |
-| Suffix Array | O(n log² n) | O(区间) (RMQ→O(1)) | O(n) |
-| SAM | O(n A) | O(\|s\|) | O(n A) |
-| Palindrome Tree | O(n A) | — | O(n A) |
-
----
-
-## When to Use What
-
-| Problem type | Recommended |
-| ------------ | ----------- |
-| 子串相等 / 字典序比较 | Rolling hash |
-| 单模式匹配 | KMP / Z |
-| 多模式匹配 | Aho-Corasick |
-| 回文查询 | Manacher / Palindrome Tree |
-| 双串最长公共子串 | Suffix Array / SAM |
-| 本质不同子串数 | SAM / Suffix Array |
-| 字典序 K 小子串 | SAM (DAG 上 DP) |
-| 子串出现次数 | SAM (cnt) |
-| 编辑距离（小串） | DP O(n·m) |
