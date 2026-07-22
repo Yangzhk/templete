@@ -250,7 +250,7 @@ struct XORBasis {
 
     bool insert(long long x) {
         for (int i = 60; ~i; i--) {
-            if (!(x >> i)) continue;
+            if (!(x >> i & 1)) continue;
             if (!p[i]) { p[i] = x; return true; }
             x ^= p[i];
         }
@@ -260,7 +260,7 @@ struct XORBasis {
     long long maxXor(long long init = 0) {
         long long res = init;
         for (int i = 60; ~i; i--)
-            if ((res ^ p[i]) > res) res ^= p[i];
+            if (!(res >> i & 1) res ^= p[i];
         return res;
     }
 
