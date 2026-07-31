@@ -894,19 +894,28 @@ using namespace std;
 const db EPS = 1e-9;
 
 inline int sign(db a) { return a < -EPS ? -1 : a > EPS; }
+template<class T> inline int sign(T a) { return a < 0 ? -1 : (a > 0 ? 1 : 0); }
 
 inline int cmp(db a, db b) { return sign(a - b); }
+template<class T> inline int cmp(T a, T b) { return sign(a - b); }
 
+template<class T>
 struct P {
-    db x, y;
+    T x, y;
 
     P() {}
-    P(db _x, db _y) : x(_x), y(_y) {}
+    P(T _x, T _y) : x(_x), y(_y) {}
     
-    P operator + (P p) { return {x + p.x, y + p.y}; }
-    P operator - (P p) { return {x - p.x, y - p.y}; }
-    P operator * (db d) { return {x * d, y * d}; }
-    P operator / (db d) { return {x / d, y / d}; }
+    // 允许不同类型之间的坐标转换
+    template<class U>
+    P(const P<U>& p) : x(p.x), y(p.y) {}
+
+    P operator + (P p) const { return {x + p.x, y + p.y}; }
+    P operator - (P p) const { return {x - p.x, y - p.y}; }
+    
+    // 极简写法：直接乘以/除以类型 T
+    P operator * (T d) const { return {x * d, y * d}; }
+    P operator / (T d) const { return {x / d, y / d}; }
 
     bool operator < (P p) const {
         int c = cmp(x, p.x);
@@ -914,114 +923,127 @@ struct P {
         return cmp(y, p.y) == -1;
     }
 
-    /*极角排序
-    bool operator < (P p) const {
-        if(quad() != b.quad()) return quad() < p.quad();
-        return sign(det(p)) == -1;
-    } 
-    */
-
     bool operator == (P o) const {
         return cmp(x, o.x) == 0 && cmp(y, o.y) == 0;
     }
 
-    db distTo(P p) { return (*this - p).abs(); }
-    db alpha() { return atan2(y, x); }
+    db distTo(P p) const { return (*this - p).abs(); }
+    db alpha() const { return atan2(y, x); }
     void read() { cin >> x >> y; }
-    void write() { cout << "(" << x << "," << y << ")" << "\n"; }
-    db abs() { return sqrt(abs2()); }
-    db abs2() { return x * x + y * y; }
-    P rot90() { return P(-y, x); }
-    P unit() { return *this / abs(); }
+    void write() const { cout << "(" << x << "," << y << ")" << "\n"; }
+    db abs() const { return sqrt(abs2()); }
+    T abs2() const { return x * x + y * y; }
+    P rot90() const { return P(-y, x); }
+    
+    // 强转为 P<db> 后再除以浮点长度，避免 T 为整型时发生截断
+    P<db> unit() const { return P<db>(*this) / abs(); }
     int quad() const { return sign(y) == 1 || (sign(y) == 0 && sign(x) >= 0); }
 
-    db dot(P p) { return x * p.x + y * p.y; }
-    db det(P p) { return x * p.y - y * p.x; }
+    T dot(P p) const { return x * p.x + y * p.y; }
+    T det(P p) const { return x * p.y - y * p.x; }
 
-    P rot(db an) { return {x * cos(an) - y * sin(an), x * sin(an) + y * cos(an)}; }
-
+    P<db> rot(db an) const { return {x * cos(an) - y * sin(an), x * sin(an) + y * cos(an)}; }
 };
 
-db cross(P p1, P p2, P p3) { return ((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)); }
-int crossOp(P p1, P p2, P p3) { return sign(cross(p1, p2, p3)); }
+template<class T>
+T cross(P<T> p1, P<T> p2, P<T> p3) { return ((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)); }
 
-bool chkLL(P p1, P p2, P q1, P q2) {//直线平行
-    db a1 = cross(q1, q2, p1), a2 = -cross(q1, q2, p2);
+template<class T>
+int crossOp(P<T> p1, P<T> p2, P<T> p3) { return sign(cross(p1, p2, p3)); }
+
+template<class T>
+bool chkLL(P<T> p1, P<T> p2, P<T> q1, P<T> q2) {//直线平行
+    T a1 = cross(q1, q2, p1), a2 = -cross(q1, q2, p2);
     return sign(a1 + a2) != 0;
 }
 
-P isLL(P p1, P p2, P q1, P q2) { // 直线交点
+template<class T>
+P<db> isLL(P<T> p1, P<T> p2, P<T> q1, P<T> q2) { // 直线交点
     db a1 = cross(q1, q2, p1), a2 = -cross(q1, q2, p2);
-    return (p1 * a2 + p2 * a1) / (a1 + a2);
+    // 这里 a1, a2 是 db 类型，强转为 P<db> 后可以调用 P<db> 的 operator * (db)
+    return (P<db>(p1) * a2 + P<db>(p2) * a1) / (a1 + a2);
 }
 
-bool intersect(db l1, db r1, db l2, db r2) { // 跨立实验
+template<class T>
+bool intersect(T l1, T r1, T l2, T r2) { // 跨立实验
     if(l1 > r1) swap(l1, r1); if(l2 > r2) swap(l2, r2);
     return !( cmp(r1, l2) == -1 || cmp(r2, l1) == -1 );
 }
 
-bool isSS(P p1, P p2, P q1, P q2) { // 线段相交
+template<class T>
+bool isSS(P<T> p1, P<T> p2, P<T> q1, P<T> q2) { // 线段相交
     return intersect(p1.x, p2.x, q1.x, q2.x) && intersect(p1.y, p2.y, q1.y, q2.y) &&
     crossOp(p1, p2, q1) * crossOp(p1, p2, q2) <= 0 && crossOp(q1, q2, p1)
             * crossOp(q1, q2, p2) <= 0;
 }
 
-bool isSS_strict(P p1, P p2, P q1, P q2) { // 是否严格相交
+template<class T>
+bool isSS_strict(P<T> p1, P<T> p2, P<T> q1, P<T> q2) { // 是否严格相交
     return crossOp(p1, p2, q1) * crossOp(p1, p2, q2) < 0 && crossOp(q1, q2, p1)
             * crossOp(q1, q2, p2) < 0;
 }
 
-bool isMiddle(db a, db m, db b) {
+template<class T>
+bool isMiddle(T a, T m, T b) {
     return sign(a - m) == 0 || sign(b - m) == 0 || (a < m != b < m);
 }
 
-bool isMiddle(P a, P m, P b) {
+template<class T>
+bool isMiddle(P<T> a, P<T> m, P<T> b) {
     return isMiddle(a.x, m.x, b.x) && isMiddle(a.y, m.y, b.y);
 }
 
-bool onSeg(P p1, P p2, P q) { // 点在线段上
+template<class T>
+bool onSeg(P<T> p1, P<T> p2, P<T> q) { // 点在线段上
     return crossOp(p1, p2, q) == 0 && isMiddle(p1, q, p2);
 }
 
-bool onSeg_strict(P p1, P p2, P q) {
-    return crossOp(p1, p2, q) == 0 && sign((q - p1).dot(p1 - p2) * sign((q - p2).dot(p1 - p2)) < 0);
+template<class T>
+bool onSeg_strict(P<T> p1, P<T> p2, P<T> q) {
+    return crossOp(p1, p2, q) == 0 && sign((q - p1).dot(p1 - p2)) * sign((q - p2).dot(p1 - p2)) < 0;
 }
 
-P proj(P p1, P p2, P q) { // 投影
-    P dir = p2 - p1;
-    return p1 + dir * (dir.dot(q - p1) / dir.abs2());
+template<class T>
+P<db> proj(P<T> p1, P<T> p2, P<T> q) { // 投影
+    P<db> dir = P<db>(p2) - P<db>(p1);
+    return P<db>(p1) + dir * (dir.dot(P<db>(q) - P<db>(p1)) / dir.abs2());
 }
 
-P reflect(P p1, P p2, P q) { // 对称点 
-    return proj(p1, p2, q) * 2 - q;
+template<class T>
+P<db> reflect(P<T> p1, P<T> p2, P<T> q) { // 对称点 
+    return proj(p1, p2, q) * 2.0 - P<db>(q);
 }
 
-db nearest(P p1, P p2, P q) { // 点到线段的最短距离
-    P h = proj(p1, p2, q);
-    if(isMiddle(p1, h, p2))
-        return q.distTo(h);
+template<class T>
+db nearest(P<T> p1, P<T> p2, P<T> q) { // 点到线段的最短距离
+    P<db> h = proj(p1, p2, q);
+    if(isMiddle(P<db>(p1), h, P<db>(p2)))
+        return P<db>(q).distTo(h);
     return min(p1.distTo(q), p2.distTo(q));
 }
 
-db disSS(P p1, P p2, P q1, P q2) { // 线段到线段的最短距离
+template<class T>
+db disSS(P<T> p1, P<T> p2, P<T> q1, P<T> q2) { // 线段到线段的最短距离
     if(isSS(p1, p2, q1, q2)) return 0;
     return min(min(nearest(p1, p2, q1), nearest(p1, p2, q2)), min(nearest(q1, q2, p1), nearest(q1, q2, p2)));
 }
 
-db rad(P p1, P p2) { // 向量夹角
+template<class T>
+db rad(P<T> p1, P<T> p2) { // 向量夹角
     return atan2l(p1.det(p2), p1.dot(p2));
 }
 
-db area(vector<P> ps) { // 多边形面积
-    db ret = 0; rep(i, 0, ps.size() - 1) ret += ps[i].det(ps[(i + 1) % ps.size()]);
-
+template<class T>
+db area(vector<P<T>> ps) { // 多边形面积
+    db ret = 0; rep(i, 0, (int)ps.size() - 1) ret += ps[i].det(ps[(i + 1) % ps.size()]);
     return ret / 2;
 }
 
-int contain(vector<P> ps, P p) { // 2: inside, 1: on_seg, 0: outside
+template<class T>
+int contain(vector<P<T>> ps, P<T> p) { // 2: inside, 1: on_seg, 0: outside
     int n = ps.size(), ret = 0;
     rep(i, 0, n-1) {
-        P u = ps[i], v = ps[(i + 1) % n];
+        P<T> u = ps[i], v = ps[(i + 1) % n];
         if(onSeg(u, v, p)) return 1;
         if(cmp(u.y, v.y) <= 0) swap(u, v);
         if(cmp(p.y, u.y) > 0 || cmp(p.y, v.y) <= 0) continue;
@@ -1030,10 +1052,11 @@ int contain(vector<P> ps, P p) { // 2: inside, 1: on_seg, 0: outside
     return ret * 2;
 }
 
-vector<P> convexHull(vector<P> ps) {
+template<class T>
+vector<P<T>> convexHull(vector<P<T>> ps) {
     int n = ps.size(); if(n <= 1) return ps;
     sort(ps.begin(), ps.end());
-    vector<P> qs(n * 2); int k = 0;
+    vector<P<T>> qs(n * 2); int k = 0;
     for(int i = 0; i < n; qs[k++] = ps[i++])
         while(k > 1 && crossOp(qs[k - 2], qs[k - 1], ps[i]) <= 0) k--;
     for(int i = n - 2, t = k; i >= 0; qs[k++] = ps[i--])
@@ -1042,29 +1065,28 @@ vector<P> convexHull(vector<P> ps) {
     return qs;
 }
 
-db dist2(P a, P b) { return (a - b).abs2(); }
+template<class T>
+T dist2(P<T> a, P<T> b) { return (a - b).abs2(); }
 
-db convexDiameter(vector<P> ps) { // 旋转卡尺
+template<class T>
+db convexDiameter(vector<P<T>> ps) { // 旋转卡尺
     int n = ps.size();
     if (n <= 1) return 0;
     if (n == 2) return ps[0].distTo(ps[1]);
     
-    db maxd2 = 0;
-    // 旋转卡尺寻找最远点对
+    T maxd2 = 0;
     for (int i = 0, j = 1; i < n; i++) {
-        // 当 (i, i+1, j+1) 的面积大于 (i, i+1, j) 时，j 向后移
-        // 这里使用 det (叉积) 计算平行四边形面积
         while (sign((ps[(i + 1) % n] - ps[i]).det(ps[(j + 1) % n] - ps[i]) - 
                    (ps[(i + 1) % n] - ps[i]).det(ps[j] - ps[i])) > 0) {
             j = (j + 1) % n;
         }
         maxd2 = max({maxd2, dist2(ps[i], ps[j]), dist2(ps[(i + 1) % n], ps[j])});
     }
-    return sqrt(maxd2);
+    return sqrt((db)maxd2);
 }
 
-// 辅助函数：将凸包的顶点调整为从左下角开始，且为逆时针
-void reorder(vector<P>& ps) {
+template<class T>
+void reorder(vector<P<T>>& ps) {
     int pos = 0;
     for(int i = 1; i < ps.size(); i++) {
         if(ps[i].y < ps[pos].y || (ps[i].y == ps[pos].y && ps[i].x < ps[pos].x)) pos = i;
@@ -1072,29 +1094,27 @@ void reorder(vector<P>& ps) {
     rotate(ps.begin(), ps.begin() + pos, ps.end());
 }
 
-vector<P> minkowskiSum(vector<P> A, vector<P> B) { // 闵可夫斯基和
+template<class T>
+vector<P<T>> minkowskiSum(vector<P<T>> A, vector<P<T>> B) { // 闵可夫斯基和
     reorder(A); reorder(B);
     int n = A.size(), m = B.size();
     
-    // 构造差分向量
-    vector<P> v1(n), v2(m);
+    vector<P<T>> v1(n), v2(m);
     for(int i = 0; i < n; i++) v1[i] = A[(i + 1) % n] - A[i];
     for(int i = 0; i < m; i++) v2[i] = B[(i + 1) % m] - B[i];
     
-    vector<P> res;
+    vector<P<T>> res;
     res.push_back(A[0] + B[0]);
     
-    // 归并排序边向量（按极角）
     int i = 0, j = 0;
     while(i < n && j < m) {
         if(sign(v1[i].det(v2[j])) > 0) res.push_back(res.back() + v1[i++]);
         else if(sign(v1[i].det(v2[j])) < 0) res.push_back(res.back() + v2[j++]);
-        else res.push_back(res.back() + v1[i++] + v2[j++]); // 平行向量合并
+        else res.push_back(res.back() + v1[i++] + v2[j++]); 
     }
     while(i < n) res.push_back(res.back() + v1[i++]);
     while(j < m) res.push_back(res.back() + v2[j++]);
     
-    // 重新跑一遍凸包以去重或处理共线（可选，视具体题目精度要求而定）
     return convexHull(res); 
 }
 ```
