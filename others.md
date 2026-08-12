@@ -780,8 +780,35 @@ u64 maxPrimeFactor(u64 n) {
 ### 最大流
 
 ```
-inline bool bfs() {
-    fep(i, 1, n) cur[i] = head[i], d[i] = inf;
+#include <queue>
+
+#define int long long
+#define For(i, u) for (int i = head[u]; i; i = e[i].nxt)
+#define rep(i, a, b) for (int i = a; i <= b; i++)
+constexpr int inf = 1e18;
+
+struct Edge {
+    int v, c, nxt;
+} e[N];
+
+int head[N], cur[N], d[N];
+int cnt = 1;
+
+inline void addedge(int u, int v, int c) {
+    e[++cnt].v = v;
+    e[cnt].c = c;
+    e[cnt].nxt = head[u];
+    head[u] = cnt;
+    
+    e[++cnt].v = u;
+    e[cnt].c = 0;
+    e[cnt].nxt = head[v];
+    head[v] = cnt;
+}
+
+
+inline bool bfs(int l, int r, int S, int T) {
+    rep(i, l, r) cur[i] = head[i], d[i] = inf;
     queue<int> q;
     q.push(S);
     d[S] = 0;
@@ -796,12 +823,12 @@ inline bool bfs() {
     return d[T] ^ inf;
 }
 
-inline int dfs(int u, int flow) {
+inline int dfs(int u, int flow, int T) {
     if (u == T || !flow) return flow;
     int Sum = 0;
     for (int &i = cur[u]; i; i = e[i].nxt) {
         if (e[i].c && d[u] + 1 == d[e[i].v]) {
-            int f = dfs(e[i].v, min(flow - Sum, e[i].c));
+            int f = dfs(e[i].v, min(flow - Sum, e[i].c), T);
             e[i].c -= f;
             e[i ^ 1].c += f;
             Sum += f;
@@ -811,10 +838,15 @@ inline int dfs(int u, int flow) {
     return Sum;
 }
 
-inline int dinic() {
+inline int dinic(int S, int T) {
     int maxflow = 0;
-    while (bfs()) maxflow += dfs(S, inf);
+    while (bfs(0, n + m + 1, S, T)) maxflow += dfs(S, inf, T);
     return maxflow;
+}
+
+void init(int l, int r) {
+    cnt = 1;
+    fill(head + l, head + r + 1, 0);
 }
 
 ```
@@ -878,6 +910,127 @@ inline int zkw() {
         }
     }
     return flow;
+}
+```
+
+### dij 费用流
+
+```
+#include <bits/stdc++.h>
+#define rep(i, a, b) for (int i = (a); i <= (b); i++)
+#define int long long
+using namespace std;
+const int N = 1e4 + 10;
+const int M = 2e5 + 10;
+const int Inf = 1e18;
+int n, m, s, t;
+struct edge
+{
+    int v, nx, f, c;
+} e[M];
+struct node
+{
+    int v, e;
+} p[N];
+int fir[N];
+int h[N], vis[N], cnt;
+void spfa()
+{
+    for (int i = 1; i <= n; i++)
+        h[i] = Inf;
+    queue<int> q;
+    q.push(s);
+    h[s] = 0, vis[s] = 1;
+    while (!q.empty())
+    {
+        int u = q.front();
+        q.pop();
+        vis[u] = 0;
+        for (int i = fir[u]; ~i; i = e[i].nx)
+        {
+            int v = e[i].v;
+            if (e[i].f && h[v] > h[u] + e[i].c)
+            {
+                h[v] = h[u] + e[i].c;
+                if (!vis[v])
+                {
+                    vis[v] = 1;
+                    q.push(v);
+                }
+            }
+        }
+    }
+}
+int dis[N];
+struct Cmp
+{
+    int dis, u;
+    bool operator<(const Cmp &rhs) const
+    {
+        return dis > rhs.dis;
+    }
+};
+bool dijkstra()
+{
+    for (int i = 1; i <= n; i++)
+        dis[i] = Inf;
+    rep(i, 1, n) vis[i] = 0;
+    dis[s] = 0;
+    priority_queue<Cmp> q;
+    q.push({0, s});
+    while (!q.empty())
+    {
+        Cmp qq = q.top();
+        int u = qq.u, c = qq.dis;
+        q.pop();
+        if (vis[u])
+            continue;
+        vis[u] = 1;
+        for (int i = fir[u]; ~i; i = e[i].nx)
+        {
+            int v = e[i].v, nw = e[i].c + h[u] - h[v];
+            if (e[i].f && dis[v] > dis[u] + nw)
+            {
+                dis[v] = dis[u] + nw;
+                p[v].v = u, p[v].e = i;
+                if (!vis[v])
+                    q.push({dis[v], v});
+            }
+        }
+    }
+    return dis[t] != Inf;
+}
+void solve()
+{
+    cin >> n >> m >> s >> t;
+    rep(i, 1, n) fir[i] = -1;
+    rep(i, 1, m)
+    {
+        int u, v, f, c;
+        cin >> u >> v >> f >> c;
+        e[cnt] = {v, fir[u], f, c};
+        fir[u] = cnt++;
+        e[cnt] = {u, fir[v], 0, -c};
+        fir[v] = cnt++;
+    }
+    spfa();
+    int maxf = 0, minf = 0, cost = 0;
+    while (dijkstra())
+    {
+        minf = Inf;
+        for (int i = 1; i <= n; i++)
+            h[i] += dis[i];
+        for (int i = t; i != s; i = p[i].v)
+            minf = min(minf, e[p[i].e].f);
+        for (int i = t; i != s; i = p[i].v)
+        {
+            e[p[i].e].f -= minf;
+            e[p[i].e ^ 1].f += minf;
+        }
+        maxf += minf;
+        cost += minf * h[t];
+    }
+    cout << maxf << " " << cost << "\n";
 }
 ```
 
