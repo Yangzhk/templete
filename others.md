@@ -916,12 +916,7 @@ inline int zkw() {
 ### dij 费用流
 
 ```
-#include <bits/stdc++.h>
-#define rep(i, a, b) for (int i = (a); i <= (b); i++)
 #define int long long
-using namespace std;
-const int N = 1e4 + 10;
-const int M = 2e5 + 10;
 const int Inf = 1e18;
 int n, m, s, t;
 struct edge
