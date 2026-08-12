@@ -1068,3 +1068,127 @@ $$
 其中 $t_w(G)$ 为以任意点 $w$ 为根的内向（或外向）生成树数（用矩阵树求）。
 
 **应用**：De Bruijn 序列计数、特殊有向图欧拉回路计数。
+
+整个算法流程分三步：
+
+1. **特判**：检查所有节点的入度是否等于出度。如果有一个不相等，欧拉回路数量直接为 0。
+2. **构建基尔霍夫矩阵（Laplacian Matrix）**：
+    * 主对角线 $L[i][i]$ 填节点 $i$ 的出度。
+    * 非主对角线 $L[i][j]$ 填节点 $i$ 到 $j$ 的有向边数的相反数（即 $-cnt(i \to j)$）。
+3. **求行列式**：随便挑一个度数不为 0 的节点 $w$（比如节点 1），把矩阵的第 $w$ 行和第 $w$ 列删掉。对剩下大小为 $(n-1) \times (n-1)$ 的矩阵做高斯消元求行列式，得到的就是 $T^{root}_w(G)$。
+```
+#define int long long // 习惯全开 long long 防止乘法溢出
+const int MOD = 998244353;
+const int MAXN = 505;
+
+int in_deg[MAXN], out_deg[MAXN];
+int L[MAXN][MAXN]; // 基尔霍夫矩阵
+int fact[MAXN * MAXN]; // 预处理阶乘
+
+// 快速幂求逆元（如果需要）
+int qpow(int a, int b) {
+    int res = 1;
+    while (b) {
+        if (b & 1) res = res * a % MOD;
+        a = a * a % MOD;
+        b >>= 1;
+    }
+    return res;
+}
+
+// 高斯消元求行列式 (大小为 n 的方阵)
+int det(int n) {
+    int res = 1;
+    for (int i = 1; i <= n; i++) {
+        // 找主元
+        int pivot = i;
+        for (int j = i + 1; j <= n; j++) {
+            if (L[j][i]) {
+                pivot = j;
+                break;
+            }
+        }
+        if (pivot != i) {
+            swap(L[i], L[pivot]);
+            res = (MOD - res) % MOD; // 交换两行，行列式变号
+        }
+        if (!L[i][i]) return 0; // 满秩判断
+
+        // 消元
+        int inv = qpow(L[i][i], MOD - 2);
+        for (int j = i + 1; j <= n; j++) {
+            if (L[j][i]) {
+                int rate = L[j][i] * inv % MOD;
+                for (int k = i; k <= n; k++) {
+                    L[j][k] = (L[j][k] - rate * L[i][k]) % MOD;
+                    if (L[j][k] < 0) L[j][k] += MOD;
+                }
+            }
+        }
+        res = res * L[i][i] % MOD;
+    }
+    return (res % MOD + MOD) % MOD;
+}
+
+signed main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    // 1. 预处理阶乘
+    fact[0] = 1;
+    for (int i = 1; i < MAXN * MAXN; i++) {
+        fact[i] = fact[i - 1] * i % MOD;
+    }
+
+    int n, m; // n 个点, m 条边
+    if (!(cin >> n >> m)) return 0;
+
+    for (int i = 1; i <= m; i++) {
+        int u, v;
+        cin >> u >> v;
+        out_deg[u]++;
+        in_deg[v]++;
+        
+        // 构建基尔霍夫矩阵
+        L[u][u]++;             // 对角线加上出度
+        L[u][v]--;             // 有向边 u->v
+    }
+
+    // 2. 检查欧拉图基本条件
+    for (int i = 1; i <= n; i++) {
+        if (in_deg[i] != out_deg[i]) {
+            cout << 0 << "\n";
+            return 0;
+        }
+    }
+
+    // 3. 处理矩阵 (由于可能有负数，统一步长取模)
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= n; j++) {
+            L[i][j] = (L[i][j] % MOD + MOD) % MOD;
+        }
+    }
+
+    // 4. 去掉第一行第一列 (假设节点1在连通块内)，求 n-1 阶行列式
+    // 注意：实现时直接将 det 函数传入 n-1，且矩阵从下标 2 开始传入或者直接覆盖平移。
+    // 为了方便，这里把第2行到第n行，平移到1到n-1
+    for (int i = 1; i < n; i++) {
+        for (int j = 1; j < n; j++) {
+            L[i][j] = L[i + 1][j + 1];
+        }
+    }
+    
+    int tree_cnt = det(n - 1); // T_w 的数量
+
+    // 5. 乘上阶乘部分
+    int ans = tree_cnt;
+    for (int i = 1; i <= n; i++) {
+        if (out_deg[i] > 0) {
+            ans = ans * fact[out_deg[i] - 1] % MOD;
+        }
+    }
+
+    cout << ans << "\n";
+    return 0;
+}
+```
