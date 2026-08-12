@@ -887,39 +887,39 @@ inline int zkw() {
 ### dij 费用流
 
 ```
+#define For(i, u) for(int i = fir[u]; ~i; i = e[i].nx)
+#define rep(i, a, b) for(int i = a; i <= b; i++)
 #define int long long
 const int Inf = 1e18;
 int n, m, s, t;
-struct edge
-{
+
+struct edge {
     int v, nx, f, c;
 } e[M];
-struct node
-{
+
+struct node {
     int v, e;
 } p[N];
-int fir[N];
+
+int fir[N], dis[N];
 int h[N], vis[N], cnt;
+
 void spfa()
 {
-    for (int i = 1; i <= n; i++)
-        h[i] = Inf;
+    rep(i, 1, n) h[i] = Inf;
     queue<int> q;
     q.push(s);
     h[s] = 0, vis[s] = 1;
-    while (!q.empty())
-    {
+
+    while (!q.empty()) {
         int u = q.front();
         q.pop();
         vis[u] = 0;
-        for (int i = fir[u]; ~i; i = e[i].nx)
-        {
+        For(i, u) {
             int v = e[i].v;
-            if (e[i].f && h[v] > h[u] + e[i].c)
-            {
+            if (e[i].f && h[v] > h[u] + e[i].c) {
                 h[v] = h[u] + e[i].c;
-                if (!vis[v])
-                {
+                if (!vis[v]) {
                     vis[v] = 1;
                     q.push(v);
                 }
@@ -927,36 +927,27 @@ void spfa()
         }
     }
 }
-int dis[N];
-struct Cmp
-{
+struct Cmp {
     int dis, u;
-    bool operator<(const Cmp &rhs) const
-    {
+    bool operator<(const Cmp &rhs) const {
         return dis > rhs.dis;
     }
 };
 bool dijkstra()
 {
-    for (int i = 1; i <= n; i++)
-        dis[i] = Inf;
-    rep(i, 1, n) vis[i] = 0;
+    rep(i, 1, n) dis[i] = Inf, vis[i] = false;
     dis[s] = 0;
     priority_queue<Cmp> q;
     q.push({0, s});
-    while (!q.empty())
-    {
+    while (!q.empty()) {
         Cmp qq = q.top();
         int u = qq.u, c = qq.dis;
         q.pop();
-        if (vis[u])
-            continue;
-        vis[u] = 1;
-        for (int i = fir[u]; ~i; i = e[i].nx)
-        {
+        if (vis[u]) continue;
+        vis[u] = true;
+        For(i, u) {
             int v = e[i].v, nw = e[i].c + h[u] - h[v];
-            if (e[i].f && dis[v] > dis[u] + nw)
-            {
+            if (e[i].f && dis[v] > dis[u] + nw) {
                 dis[v] = dis[u] + nw;
                 p[v].v = u, p[v].e = i;
                 if (!vis[v])
