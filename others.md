@@ -890,7 +890,8 @@ inline int zkw() {
 #define For(i, u) for(int i = fir[u]; ~i; i = e[i].nx)
 #define rep(i, a, b) for(int i = a; i <= b; i++)
 #define int long long
-const int Inf = 1e18;
+#define pii pair<int, int>
+constexpr int Inf = 1e18;
 int n, m, s, t;
 
 struct edge {
@@ -927,21 +928,15 @@ void spfa()
         }
     }
 }
-struct Cmp {
-    int dis, u;
-    bool operator<(const Cmp &rhs) const {
-        return dis > rhs.dis;
-    }
-};
+
 bool dijkstra()
 {
     rep(i, 1, n) dis[i] = Inf, vis[i] = false;
     dis[s] = 0;
-    priority_queue<Cmp> q;
+    priority_queue<pii, vector<pii>, greater<pii>> q;
     q.push({0, s});
     while (!q.empty()) {
-        Cmp qq = q.top();
-        int u = qq.u, c = qq.dis;
+        auto [c, u] = q.top();
         q.pop();
         if (vis[u]) continue;
         vis[u] = true;
@@ -955,7 +950,7 @@ bool dijkstra()
             }
         }
     }
-    return dis[t] != Inf;
+    return dis[t] < Inf;
 }
 void solve()
 {
@@ -976,7 +971,7 @@ void solve()
     {
         minf = Inf;
         for (int i = 1; i <= n; i++)
-            h[i] += dis[i];
+            if(dis[i] < Inf) h[i] += dis[i];
         for (int i = t; i != s; i = p[i].v)
             minf = min(minf, e[p[i].e].f);
         for (int i = t; i != s; i = p[i].v)
