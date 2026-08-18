@@ -63,9 +63,9 @@
 **链式前向星**：节省内存、常用于网络流（成对存边方便 `i ^ 1` 取反向边）。
 
 ```cpp
-const int MAXN = 1e5 + 10, MAXM = 5e5 + 10;
-int head[MAXN], cnt = 1; // cnt 从 1 开始, 这样反向边 i ^ 1 成对
-struct Edge { int to, nxt, w; } e[MAXM << 1];
+const int N = 1e5 + 10, M = 5e5 + 10;
+int head[N], cnt = 1; // cnt 从 1 开始, 这样反向边 i ^ 1 成对
+struct Edge { int to, nxt, w; } e[M << 1];
 
 void addEdge(int u, int v, int w = 1) {
     e[++cnt] = {v, head[u], w}; head[u] = cnt;
