@@ -1045,9 +1045,20 @@ struct LCT {
     void makeRoot(int x) { access(x); splay(x); apply_rev(x); }
     int findRoot(int x) {
         access(x); splay(x);
-        while (t[x].ch[0]) { push(x); x = t[x].ch[0]; }
+        push(x);
+        while (t[x].ch[0]) {
+            x = t[x].ch[0];
+            push(x);
+        }
+
         splay(x); return x;
     }
+
+    bool connected(int x, int y) {
+        if (x == y) return true;
+        return findRoot(x) == findRoot(y);
+    }
+
     void link(int x, int y) {
         makeRoot(x);
         if (findRoot(y) == x) return; // 已连通
@@ -1059,7 +1070,7 @@ struct LCT {
         t[y].ch[0] = t[x].fa = 0; pull(y);
     }
     ll pathSum(int x, int y) { makeRoot(x); access(y); splay(y); return t[y].sum; }
-    void modify(int x, ll v) { splay(x); t[x].val = v; pull(x); }
+    void modify(int x, ll v) { access(x); splay(x); t[x].val = v; pull(x); }
 };
 ```
 
