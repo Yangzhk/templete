@@ -1093,6 +1093,133 @@ void cut(int x) {
 }
 ```
 
+```
+//有根树的完整模板
+struct LCT {
+    struct Node { int fa, ch[2]; ll val, sum; };
+    vector<Node> t;
+
+    LCT(int n) : t(n + 1) {}
+
+    bool isRoot(int x) {
+        int f = t[x].fa;
+        return t[f].ch[0] != x && t[f].ch[1] != x;
+    }
+
+    bool dir(int x) { return t[t[x].fa].ch[1] == x; }
+
+    void pull(int x) {
+        t[x].sum = t[t[x].ch[0]].sum ^ t[x].val ^ t[t[x].ch[1]].sum;
+    }
+
+    void rotate(int x) {
+        int y = t[x].fa, z = t[y].fa, d = dir(x), w = t[x].ch[d ^ 1];
+        if (!isRoot(y)) t[z].ch[dir(y)] = x;
+        t[x].ch[d ^ 1] = y; t[y].ch[d] = w;
+        if (w) t[w].fa = y;
+        t[y].fa = x; t[x].fa = z;
+        pull(y); pull(x);
+    }
+
+    void splay(int x) {
+        while (!isRoot(x)) {
+            int y = t[x].fa;
+            if (!isRoot(y)) rotate(dir(x) == dir(y) ? y : x);
+            rotate(x);
+        }
+    }
+
+    int access(int x) {
+        int y = 0;
+        for (; x; x = t[y = x].fa) {
+            splay(x);
+            t[x].ch[1] = y;
+            pull(x);
+        }
+        return y;
+    }
+
+    int findRoot(int x) {
+        access(x); splay(x);
+        while (t[x].ch[0]) x = t[x].ch[0];
+        splay(x);
+        return x;
+    }
+
+    bool connected(int x, int y) {
+        return x == y || findRoot(x) == findRoot(y);
+    }
+
+    int parent(int x) {
+        access(x); splay(x);
+        if (!t[x].ch[0]) return 0;
+        int y = t[x].ch[0];
+        while (t[y].ch[1]) y = t[y].ch[1];
+        splay(y);
+        return y;
+    }
+
+    bool link(int x, int y) {
+        if (findRoot(x) != x || findRoot(y) == x) return false;
+        t[x].fa = y;
+        return true;
+    }
+
+    bool cut(int x) {
+        access(x); splay(x);
+        if (!t[x].ch[0]) return false;
+        int y = t[x].ch[0];
+        t[x].ch[0] = 0;
+        t[y].fa = 0;
+        pull(x);
+        return true;
+    }
+
+    bool cut(int x, int y) {
+        if (parent(x) != y) return false;
+        return cut(x);
+    }
+
+    int lca(int x, int y) {
+        if (!connected(x, y)) return 0;
+        access(x);
+        return access(y);
+    }
+
+    ll rootXor(int x) {
+        access(x); splay(x);
+        return t[x].sum;
+    }
+
+    ll pathXor(int x, int y) {
+        int z = lca(x, y);
+        if (!z) return 0;
+        return rootXor(x) ^ rootXor(y) ^ t[z].val;
+    }
+
+    void modify(int x, ll v) {
+        access(x); splay(x);
+        t[x].val = v;
+        pull(x);
+    }
+
+    void setVal(int x, ll v) {
+        t[x].val = t[x].sum = v;
+    }
+
+    ll rootSum(int x) {
+        access(x); splay(x);
+        return t[x].sum;
+    }
+    
+    ll pathSum(int x, int y) {
+        int z = lca(x, y);
+        if (!z) return 0;
+        return rootSum(x) + rootSum(y) - 2 * rootSum(z) + t[z].val;
+    }
+};
+```
+
 均摊 $O(\log n)$ 每次操作。
 
 ### 线段树分治 + 可撤销并查集
