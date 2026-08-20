@@ -1063,6 +1063,25 @@ struct LCT {
 };
 ```
 
+```
+// 有根树的写法
+bool link(int x, int y) {
+    if (findRoot(x) != x) return false;
+    if (findRoot(y) == x) return false;
+    t[x].fa = y;
+    return true;
+}
+void cut(int x) {
+    access(x);
+    splay(x);
+
+    int left = t[x].ch[0];
+    t[x].ch[0] = 0;
+    t[left].fa = 0;
+    pull(x);
+}
+```
+
 均摊 $O(\log n)$ 每次操作。
 
 ### 线段树分治 + 可撤销并查集
