@@ -1135,7 +1135,7 @@ struct P {
     P rot(db an) { return {x * cos(an) - y * sin(an), x * sin(an) + y * cos(an)}; }
 
 };
-
+tp cross(P a, P b) { return a.x * b.y - a.y * b.x; }
 tp cross(P p1, P p2, P p3) { return ((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)); }
 int crossOp(P p1, P p2, P p3) { return sign(cross(p1, p2, p3)); }
 
