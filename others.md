@@ -1100,7 +1100,7 @@ struct P {
     P operator + (P p) { return {x + p.x, y + p.y}; }
     P operator - (P p) { return {x - p.x, y - p.y}; }
     P operator * (tp d) { return {x * d, y * d}; }
-    P operator / (tp d) { return {x / d, y / d}; }
+    P operator / (db d) { return {x / d, y / d}; }
 
     bool operator < (P p) const {
         int c = cmp(x, p.x);
