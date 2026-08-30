@@ -105,26 +105,6 @@ $$f(n) = \sum_{k \le n} \binom{n}{k} g(k),\quad g(n) = \sum_{k \le n} (-1)^{n-k}
 
 $$\sum_{i=1}^{n} \sum_{j=1}^{m} [\gcd(i,j) = 1] = \sum_{d=1}^{\min(n,m)} \mu(d) \lfloor n/d \rfloor \lfloor m/d \rfloor$$
 
-### 迪利克雷卷积
-
-对算术函数 $f, g: \mathbb Z_{>0} \to \mathbb C$，定义迪利克雷卷积：
-
-$$(f * g)(n) = \sum_{d \mid n} f(d) \cdot g\!\left(\frac{n}{d}\right) = \sum_{ab = n} f(a) \cdot g(b)$$
-
-**代数结构**：迪利克雷卷积构成交换幺半群——满足交换律、结合律，单位元为 $\varepsilon(n) = [n = 1]$。若 $f(1) \ne 0$，则 $f$ 存在迪利克雷逆。
-
-**核心卷积恒等式**：
-
-$$\mu * 1 = \varepsilon \qquad$$
-
-$$\varphi * 1 = \operatorname{id} \qquad (\sum_{d \mid n} \varphi(d) = n)$$
-
-$$1 * 1 = d \qquad \operatorname{id}_k * 1 = \sigma_k$$
-
-$$\mu * \operatorname{id} = \varphi \qquad (\varphi(n) = \sum_{d \mid n} \mu(d) \cdot n/d)$$
-
-$$g = f * 1 \iff f = g * \mu$$
-
 ### 莫比乌斯反演
 
 **经典形式**：
