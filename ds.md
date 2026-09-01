@@ -16,6 +16,7 @@
   - [一维 ST 表](#一维-st-表)
   - [二维 ST 表](#二维-st-表)
 - [单调栈与单调队列](#单调栈与单调队列)
+- [01 trie](#01-trie)
 - [线段树](#线段树)
   - [综合 lazy 线段树（加 / 乘 / 赋值）](#综合-lazy-线段树加--乘--赋值)
   - [Segment Tree Beats（吉司机）](#segment-tree-beats吉司机)
@@ -308,6 +309,72 @@ vector<int> sliding_min(const vector<int>& a, int k) {
     }
     return res;
 }
+```
+
+---
+
+## 01 trie
+
+```
+struct Trie {
+    static const int B = 60;
+    int tot = 1;
+    vector<array<int, 2>> ch;
+    vector<int> cnt;
+
+    Trie(int n) : ch(n * (B + 2) + 5), cnt(n * (B + 2) + 5) {}
+
+    void insert(long long x) {
+        int p = 1;
+        cnt[p]++;
+        for(int i = B; i >= 0; i--) {
+            int c = (x >> i) & 1;
+            if(!ch[p][c]) ch[p][c] = ++tot;
+            p = ch[p][c];
+            cnt[p]++;
+        }
+    }
+
+    void erase(long long x) {
+        int p = 1;
+        cnt[p]--;
+        for(int i = B; i >= 0; i--) {
+            int c = (x >> i) & 1;
+            p = ch[p][c];
+            cnt[p]--;
+        }
+    }
+
+    long long queryMax(long long x) {
+        int p = 1;
+        long long ans = 0;
+        for(int i = B; i >= 0; i--) {
+            int c = (x >> i) & 1;
+            if(ch[p][c ^ 1] && cnt[ch[p][c ^ 1]]) {
+                ans |= 1LL << i;
+                p = ch[p][c ^ 1];
+            } else {
+                p = ch[p][c];
+            }
+        }
+        return ans;
+    }
+
+    long long queryMin(long long x) {
+        int p = 1;
+        long long ans = 0;
+        for(int i = B; i >= 0; i--) {
+            int c = (x >> i) & 1;
+            if(ch[p][c] && cnt[ch[p][c]]) {
+                p = ch[p][c];
+            } else {
+                ans |= 1LL << i;
+                p = ch[p][c ^ 1];
+            }
+        }
+        return ans;
+    }
+};
 ```
 
 ---
