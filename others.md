@@ -979,7 +979,121 @@ inline int zkw() {
 }
 ```
 
-### dij 费用流
+### dij 费用流(单路增广)
+
+```cpp
+#define For(i, u) for(int i = fir[u]; ~i; i = e[i].nx)
+#define rep(i, a, b) for(int i = a; i <= b; i++)
+#define int long long
+#define pii pair<int, int>
+constexpr int Inf = 1e18;
+int n, m, s, t;
+
+struct edge {
+    int v, nx, f, c;
+} e[M];
+
+struct node {
+    int v, e;
+} p[N];
+
+int fir[N], dis[N], h[N], vis[N], cnt;
+
+void spfa()
+{
+    rep(i, 1, n) h[i] = Inf, vis[i] = false;
+    queue<int> q;
+    q.push(s);
+    h[s] = 0, vis[s] = 1;
+
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        vis[u] = 0;
+        For(i, u) {
+            int v = e[i].v;
+            if (e[i].f && h[v] > h[u] + e[i].c) {
+                h[v] = h[u] + e[i].c;
+                if (!vis[v]) {
+                    vis[v] = 1;
+                    q.push(v);
+                }
+            }
+        }
+    }
+}
+
+bool dijkstra()
+{
+    rep(i, 1, n) dis[i] = Inf, vis[i] = false;
+    dis[s] = 0;
+    priority_queue<pii, vector<pii>, greater<pii>> q;
+    q.push({0, s});
+
+    while (!q.empty()) {
+        auto [d, u] = q.top();
+        q.pop();
+        if (vis[u]) continue;
+        vis[u] = true;
+
+        For(i, u) {
+            int v = e[i].v;
+            if (!e[i].f || h[u] == Inf || h[v] == Inf) continue;
+
+            int nw = e[i].c + h[u] - h[v];
+            if (dis[v] > dis[u] + nw) {
+                dis[v] = dis[u] + nw;
+                p[v] = {u, i};
+                q.push({dis[v], v});
+            }
+        }
+    }
+
+    if (dis[t] == Inf) return false;
+
+    rep(i, 1, n)
+        if (dis[i] < Inf)
+            h[i] += dis[i];
+
+    return true;
+}
+
+void addedge(int u, int v, int f, int c) {
+    e[cnt] = {v, fir[u], f, c};
+    fir[u] = cnt++;
+    e[cnt] = {u, fir[v], 0, -c};
+    fir[v] = cnt++;
+}
+
+pair<int, int> MCMF() {
+    spfa();
+
+    int maxf = 0, cost = 0;
+
+    while (dijkstra()) {
+        int minf = Inf;
+
+        for (int u = t; u != s; u = p[u].v)
+            minf = min(minf, e[p[u].e].f);
+
+        for (int u = t; u != s; u = p[u].v) {
+            e[p[u].e].f -= minf;
+            e[p[u].e ^ 1].f += minf;
+        }
+
+        maxf += minf;
+        cost += minf * h[t];
+    }
+
+    return {maxf, cost};
+}
+
+void init(int n) {
+    cnt = 0;
+    rep(i, 1, n) fir[i] = -1;
+}
+
+### dij 费用流(多路增广)
 
 ```cpp
 #define For(i, u) for(int i = fir[u]; ~i; i = e[i].nx)
