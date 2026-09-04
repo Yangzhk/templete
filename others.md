@@ -1070,6 +1070,11 @@ void solve()
     }
     cout << maxf << " " << cost << "\n";
 }
+
+void init() {
+    cnt = 0;
+    rep(i, 1, n) fir[i] = -1;
+}
 ```
 
 # 上下界网络流 (Bounded Network Flow) 模板
