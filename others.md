@@ -850,14 +850,10 @@ int head[N], cur[N], d[N];
 int cnt = 1;
 
 inline void addedge(int u, int v, int c) {
-    e[++cnt].v = v;
-    e[cnt].c = c;
-    e[cnt].nxt = head[u];
+    e[++cnt] = {v, c, head[u]};
     head[u] = cnt;
     
-    e[++cnt].v = u;
-    e[cnt].c = 0;
-    e[cnt].nxt = head[v];
+    e[++cnt] = {u, 0, head[v]};
     head[v] = cnt;
 }
 
@@ -1036,6 +1032,14 @@ bool dijkstra()
     }
     return dis[t] < Inf;
 }
+
+void addedge(int u, int v, int f, int c) {
+    e[cnt] = {v, fir[u], f, c};
+    fir[u] = cnt++;
+    e[cnt] = {u, fir[v], 0, -c};
+    fir[v] = cnt++;
+}
+
 void solve()
 {
     cin >> n >> m >> s >> t;
@@ -1044,10 +1048,7 @@ void solve()
     {
         int u, v, f, c;
         cin >> u >> v >> f >> c;
-        e[cnt] = {v, fir[u], f, c};
-        fir[u] = cnt++;
-        e[cnt] = {u, fir[v], 0, -c};
-        fir[v] = cnt++;
+        addedge(u, v, f, c);
     }
     spfa();
     int maxf = 0, minf = 0, cost = 0;
