@@ -1071,6 +1071,191 @@ void solve()
 }
 ```
 
+# 上下界网络流 (Bounded Network Flow) 模板
+
+## 一、 最大流体系 (配合 Dinic 使用)
+> **依赖提示**：需要预先定义好原有的 `e`, `head`, `cnt` (初始值为 `1`)，以及 `addedge(u, v, c)` 和 `dinic(S, T)` 函数。
+
+### 1. 核心变量与建图辅助函数
+```cpp
+int M[N];       // 盈亏数组：流入下界和 - 流出下界和
+int sum_demand; // 需要补给的总流量
+
+// 初始化 (每次求解前调用)
+void init_bound() {
+    sum_demand = 0;
+    // memset(M, 0, sizeof(M)); // 多测时视情况清空
+}
+
+// 添加上下界边 (u -> v, 容量 [l, r])
+inline void add_bound_edge(int u, int v, int l, int r) {
+    M[v] += l;
+    M[u] -= l;
+    addedge(u, v, r - l); // 原图连自由流
+}
+
+// 建立超级源汇 SS 到 TT 的补给网络
+inline void build_SS_TT(int n, int SS, int TT) {
+    for (int i = 1; i <= n; i++) {
+        if (M[i] > 0) {
+            addedge(SS, i, M[i]);
+            sum_demand += M[i];
+        } else if (M[i] < 0) {
+            addedge(i, TT, -M[i]);
+        }
+    }
+}
+```
+
+### 2. 无源汇上下界可行流
+```cpp
+// 传入点数 n, 超级源汇 SS, TT。返回是否存在可行流
+bool solve_feasible_flow(int n, int SS, int TT) {
+    build_SS_TT(n, SS, TT);
+    return dinic(SS, TT) == sum_demand; 
+}
+```
+
+### 3. 有源汇上下界可行流
+```cpp
+// 传入原源汇 S, T, 超级源汇 SS, TT
+bool solve_ST_feasible_flow(int n, int S, int T, int SS, int TT) {
+    addedge(T, S, inf); // 连一条容量无限大的循环边，化为无源汇
+    build_SS_TT(n, SS, TT);
+    return dinic(SS, TT) == sum_demand;
+}
+```
+
+### 4. 有源汇上下界最大流 / 最小流
+```cpp
+// is_max_flow = true (最大流), false (最小流)
+void solve_ST_max_min_flow(int n, int S, int T, int SS, int TT, bool is_max_flow) {
+    int cycle_edge_idx = cnt + 1; // 记录 T->S 这条边的正向索引 (基于 cnt=1 的前置++写法)
+    addedge(T, S, inf); 
+    
+    build_SS_TT(n, SS, TT);
+    
+    if (dinic(SS, TT) != sum_demand) {
+        // 无解处理
+        return; 
+    }
+    
+    int ans = e[cycle_edge_idx ^ 1].c; // 当前可行流大小
+    e[cycle_edge_idx].c = e[cycle_edge_idx ^ 1].c = 0; // 拆除循环边
+    
+    if (is_max_flow) ans += dinic(S, T); // 最大流：残量网络正向增广
+    else ans -= dinic(T, S);             // 最小流：残量网络反向退流
+    
+    // ans 即为最终答案
+}
+```
+
+---
+
+## 二、 费用流体系 (配合 Dijkstra 费用流使用)
+> **依赖提示**：需要预先定义好原有的 `e`, `fir`, `cnt` (初始值为 `0`)，全局起点终点 `s`, `t`，以及 `addedge(u, v, f, c)`，`spfa()`，`dijkstra()` 函数。
+
+### 1. 核心变量与建图辅助函数
+```cpp
+int total_base_cost; // 记录必须流的下界所产生的保底费用
+
+// 初始化 (每次求解前调用)
+void init_bound_cost() {
+    sum_demand = total_base_cost = 0;
+    // memset(M, 0, sizeof(M)); 
+}
+
+// 添加上下界费用边 (u -> v, 容量 [l, r], 单位费用 w)
+inline void add_bound_edge_cost(int u, int v, int l, int r, int w) {
+    M[v] += l;
+    M[u] -= l;
+    total_base_cost += l * w; // 累计保底费用
+    addedge(u, v, r - l, w);  // 残量网络连自由流
+}
+
+// 建立补给网络
+inline void build_SS_TT_cost(int n, int SS, int TT) {
+    for (int i = 1; i <= n; i++) {
+        if (M[i] > 0) {
+            addedge(SS, i, M[i], 0);
+            sum_demand += M[i];
+        } else if (M[i] < 0) {
+            addedge(i, TT, -M[i], 0);
+        }
+    }
+}
+```
+
+### 2. 封装 MCMF 跑流逻辑
+```cpp
+// 内部函数：封装一次完整的最小费用最大流求解过程
+// 返回 pair {当前增广的总流量, 当前增广的总费用}
+pair<int, int> run_mcmf(int n, int src, int dst) {
+    s = src; t = dst; // 动态切换全局起点和终点
+    spfa();
+    int flow = 0, cost = 0, minf = 0;
+    while (dijkstra()) {
+        minf = Inf;
+        for (int i = 1; i <= n; i++)
+            if(dis[i] < Inf) h[i] += dis[i];
+        for (int i = t; i != s; i = p[i].v)
+            minf = min(minf, e[p[i].e].f);
+        for (int i = t; i != s; i = p[i].v) {
+            e[p[i].e].f -= minf;
+            e[p[i].e ^ 1].f += minf;
+        }
+        flow += minf;
+        cost += minf * h[t];
+    }
+    return {flow, cost};
+}
+```
+
+### 3. 上下界无源汇最小费用可行流
+```cpp
+void solve_feasible_mincost(int n, int SS, int TT) {
+    build_SS_TT_cost(n, SS, TT);
+    
+    auto [maxf, cost] = run_mcmf(n, SS, TT);
+    
+    if (maxf != sum_demand) {
+        // 无解处理
+        return;
+    }
+    // 最终最小费用 = 保底费用 + 自由流费用
+    // int ans_cost = total_base_cost + cost;
+}
+```
+
+### 4. 上下界有源汇最小费用最大流
+```cpp
+void solve_ST_mincost_maxflow(int n, int S, int T, int SS, int TT) {
+    int cycle_edge_idx = cnt; // 记录正向循环边索引 (基于 cnt=0 的后置++写法)
+    addedge(T, S, Inf, 0);    // 连循环边
+    
+    build_SS_TT_cost(n, SS, TT);
+    
+    // 第一阶段：填补下界亏空
+    auto [maxf, cost1] = run_mcmf(n, SS, TT);
+    
+    if (maxf != sum_demand) {
+        // 无解处理
+        return;
+    }
+    
+    int initial_flow = e[cycle_edge_idx ^ 1].f; 
+    e[cycle_edge_idx].f = e[cycle_edge_idx ^ 1].f = 0; // 拆除循环边
+    
+    // 第二阶段：在残量网络上追求最大流
+    auto [add_flow, cost2] = run_mcmf(n, S, T);
+    
+    int final_maxflow = initial_flow + add_flow;
+    int final_mincost = total_base_cost + cost1 + cost2;
+    
+    // 输出或返回 final_maxflow 和 final_mincost
+}
+```
+
 ### 计算几何 (dls version)
 
 ```
