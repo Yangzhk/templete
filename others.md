@@ -1041,16 +1041,7 @@ void addedge(int u, int v, int f, int c) {
     fir[v] = cnt++;
 }
 
-void solve()
-{
-    cin >> n >> m >> s >> t;
-    rep(i, 1, n) fir[i] = -1;
-    rep(i, 1, m)
-    {
-        int u, v, f, c;
-        cin >> u >> v >> f >> c;
-        addedge(u, v, f, c);
-    }
+void MCMF() {
     spfa();
     int maxf = 0, minf = 0, cost = 0;
     while (dijkstra())
@@ -1068,13 +1059,13 @@ void solve()
         maxf += minf;
         cost += minf * h[t];
     }
-    cout << maxf << " " << cost << "\n";
 }
 
-void init() {
+void init(int n) {
     cnt = 0;
     rep(i, 1, n) fir[i] = -1;
 }
+
 ```
 
 # 上下界网络流 (Bounded Network Flow) 模板
