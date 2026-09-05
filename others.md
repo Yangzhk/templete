@@ -1092,6 +1092,7 @@ void init(int n) {
     cnt = 0;
     rep(i, 1, n) fir[i] = -1;
 }
+```
 
 ### dij 费用流(多路增广)
 
