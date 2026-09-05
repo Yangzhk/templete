@@ -1354,6 +1354,8 @@ void solve_ST_max_min_flow(int S, int T, bool is_max_flow) {
 ##### 1. 核心变量与建图辅助函数
 
 ```cpp
+int bal[N];     // 盈亏数组：流入下界和 - 流出下界和
+int sum_demand; // 需要补给的总流量
 int total_base_cost; // 记录必须流的下界所产生的保底费用
 
 // 初始化 (每次求解前调用)
