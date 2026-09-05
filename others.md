@@ -1414,22 +1414,21 @@ pair<int, int> run_mcmf(int src, int dst) {
 ##### 3. 上下界无源汇最小费用可行流
 
 ```cpp
-void solve_feasible_mincost() {
+int BDMCMF() {
     int SS = n + 1, TT = n + 2;
 
-    build_SS_TT_cost();
+    buildST();
 
-    n = TT;
+    n = TT, s = SS, t = TT;
     
-    auto [maxf, cost] = run_mcmf(SS, TT);
+    auto [maxf, cost] = MCMF();
     
     if (maxf != sum_demand) {
-        // 无解处理
-        return;
+        return -1;
     }
 
-    // 最终最小费用 = 保底费用 + 自由流费用
-    // int ans_cost = total_base_cost + cost;
+    int ans_cost = total_base_cost + cost;
+    return ans_cost;
 }
 ```
 
