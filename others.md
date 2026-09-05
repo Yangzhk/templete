@@ -1244,15 +1244,15 @@ void init(int n) {
 }
 ```
 
-# 上下界网络流 (Bounded Network Flow) 模板
+### 上下界网络流
 
-## 一、 最大流体系 (配合 Dinic 使用)
+#### 一、 最大流
 
 > **依赖提示**：需要预先定义好原有的 `e`, `fir`, `cnt` (初始值为 `0`)，以及 `addedge(u, v, c)` 和 `dinic(S, T)` 函数。
 >
 > 使用上下界网络流时，超级源汇默认取 `SS = n + 1, TT = n + 2`，因此初始化时直接 `init(n + 2)`。
 
-### 1. 核心变量与建图辅助函数
+##### 1. 核心变量与建图辅助函数
 
 ```cpp
 int M[N];       // 盈亏数组：流入下界和 - 流出下界和
@@ -1285,7 +1285,7 @@ inline void build_SS_TT() {
 }
 ```
 
-### 2. 无源汇上下界可行流
+##### 2. 无源汇上下界可行流
 
 ```cpp
 bool solve_feasible_flow() {
@@ -1298,7 +1298,7 @@ bool solve_feasible_flow() {
 }
 ```
 
-### 3. 有源汇上下界可行流
+##### 3. 有源汇上下界可行流
 
 ```cpp
 bool solve_ST_feasible_flow(int S, int T) {
@@ -1313,7 +1313,7 @@ bool solve_ST_feasible_flow(int S, int T) {
 }
 ```
 
-### 4. 有源汇上下界最大流 / 最小流
+##### 4. 有源汇上下界最大流 / 最小流
 
 ```cpp
 // is_max_flow = true (最大流), false (最小流)
@@ -1344,13 +1344,13 @@ void solve_ST_max_min_flow(int S, int T, bool is_max_flow) {
 
 ---
 
-## 二、 费用流体系 (配合 Dijkstra 费用流使用)
+#### 二、 费用流
 
 > **依赖提示**：需要预先定义好原有的 `e`, `fir`, `cnt` (初始值为 `0`)，全局起点终点 `s`, `t`，以及 `addedge(u, v, f, c)`，`spfa()`，`dijkstra()`，`bfs_mcmf()`，`dfs_mcmf()` 函数。
 >
 > 使用上下界费用流时同样默认 `SS = n + 1, TT = n + 2`，初始化时直接 `init(n + 2)`。
 
-### 1. 核心变量与建图辅助函数
+##### 1. 核心变量与建图辅助函数
 
 ```cpp
 int total_base_cost; // 记录必须流的下界所产生的保底费用
@@ -1383,7 +1383,7 @@ inline void build_SS_TT_cost() {
 }
 ```
 
-### 2. 封装 MCMF 跑流逻辑
+##### 2. 封装 MCMF 跑流逻辑
 
 ```cpp
 // 内部函数：势能 + Dijkstra，并在零 reduced-cost 边上跑 blocking flow
@@ -1408,7 +1408,7 @@ pair<int, int> run_mcmf(int src, int dst) {
 }
 ```
 
-### 3. 上下界无源汇最小费用可行流
+##### 3. 上下界无源汇最小费用可行流
 
 ```cpp
 void solve_feasible_mincost() {
@@ -1430,7 +1430,7 @@ void solve_feasible_mincost() {
 }
 ```
 
-### 4. 上下界有源汇最小费用最大流
+##### 4. 上下界有源汇最小费用最大流
 
 ```cpp
 void solve_ST_mincost_maxflow(int S, int T) {
