@@ -1256,19 +1256,19 @@ void init(int n) {
 ##### 1. 核心变量与建图辅助函数
 
 ```cpp
-int M[N];       // 盈亏数组：流入下界和 - 流出下界和
+int bal[N];     // 盈亏数组：流入下界和 - 流出下界和
 int sum_demand; // 需要补给的总流量
 
 // 初始化 (每次求解前调用)
 void init_bound() {
     sum_demand = 0;
-    // memset(M, 0, sizeof(M)); // 多测时视情况清空
+    // memset(bal, 0, sizeof(bal)); // 多测时视情况清空
 }
 
 // 添加上下界边 (u -> v, 容量 [l, r])
 inline void add_bound_edge(int u, int v, int l, int r) {
-    M[v] += l;
-    M[u] -= l;
+    bal[v] += l;
+    bal[u] -= l;
     addedge(u, v, r - l); // 原图连自由流
 }
 
@@ -1276,11 +1276,11 @@ inline void add_bound_edge(int u, int v, int l, int r) {
 inline void build_SS_TT() {
     int SS = n + 1, TT = n + 2;
     for (int i = 1; i <= n; i++) {
-        if (M[i] > 0) {
-            addedge(SS, i, M[i]);
-            sum_demand += M[i];
-        } else if (M[i] < 0) {
-            addedge(i, TT, -M[i]);
+        if (bal[i] > 0) {
+            addedge(SS, i, bal[i]);
+            sum_demand += bal[i];
+        } else if (bal[i] < 0) {
+            addedge(i, TT, -bal[i]);
         }
     }
 }
@@ -1359,13 +1359,13 @@ int total_base_cost; // 记录必须流的下界所产生的保底费用
 // 初始化 (每次求解前调用)
 void init_bound_cost() {
     sum_demand = total_base_cost = 0;
-    // memset(M, 0, sizeof(M)); 
+    // memset(bal, 0, sizeof(bal)); 
 }
 
 // 添加上下界费用边 (u -> v, 容量 [l, r], 单位费用 w)
 inline void add_bound_edge_cost(int u, int v, int l, int r, int w) {
-    M[v] += l;
-    M[u] -= l;
+    bal[v] += l;
+    bal[u] -= l;
     total_base_cost += l * w; // 累计保底费用
     addedge(u, v, r - l, w);  // 残量网络连自由流
 }
@@ -1374,11 +1374,11 @@ inline void add_bound_edge_cost(int u, int v, int l, int r, int w) {
 inline void build_SS_TT_cost() {
     int SS = n + 1, TT = n + 2;
     for (int i = 1; i <= n; i++) {
-        if (M[i] > 0) {
-            addedge(SS, i, M[i], 0);
-            sum_demand += M[i];
-        } else if (M[i] < 0) {
-            addedge(i, TT, -M[i], 0);
+        if (bal[i] > 0) {
+            addedge(SS, i, bal[i], 0);
+            sum_demand += bal[i];
+        } else if (bal[i] < 0) {
+            addedge(i, TT, -bal[i], 0);
         }
     }
 }
