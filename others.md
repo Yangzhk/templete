@@ -307,63 +307,44 @@ struct PrefixBasis {
 
 ### 异或高斯消元
 ```
-const int MAXN = 1005; // 根据题目最大变量数调整
+const int MAXN = 1005;
 
-// a[i] 表示第 i 个方程。
-// 假设有 m 个变量，则 a[i][0] 到 a[i][m-1] 为系数，a[i][m] 为常数项
-bitset<MAXN> a[MAXN]; 
+bitset<MAXN> a[MAXN];  // 仅存储未知数的系数 (0 或 1)
+long long val[MAXN];   // 存储对应的整数常数项
 
-/*
- * 求解异或线性方程组
- * n: 方程个数
- * m: 变量个数
- * ans: 存储解的容器
- * 
- * 返回值:
- *  0 : 有唯一解
- *  1 : 有无穷多解（存在自由元）
- * -1 : 无解
- */
-int gauss_xor(int n, int m, vector<int>& ans) {
-    int r = 0; // 当前处理到的行
+// 返回值：0 唯一解，1 存在自由元，-1 无解
+int gauss_xor(int n, int m, vector<long long>& ans) {
+    int r = 0;
     for (int c = 0; c < m; ++c) {
-        // 1. 寻找当前列为 1 的主元
         int pivot = r;
-        while (pivot < n && !a[pivot][c]) {
-            pivot++;
-        }
-        
-        // 如果当前列全为 0，说明存在自由元，跳过处理下一列
+        while (pivot < n && !a[pivot][c]) pivot++;
         if (pivot == n) continue;
         
-        // 2. 将主元所在的行交换到当前行
         if (pivot != r) {
             swap(a[r], a[pivot]);
+            swap(val[r], val[pivot]); // 【重点】交换行时，常数项也要跟着交换
         }
         
-        // 3. 用当前行消去其他行在第 c 列的 1
         for (int i = 0; i < n; ++i) {
             if (i != r && a[i][c]) {
-                a[i] ^= a[r]; // bitset 的异或操作，极快
+                a[i] ^= a[r];
+                val[i] ^= val[r]; // 【重点】系数异或时，常数项也跟着异或
             }
         }
         r++;
     }
     
-    // 4. 判断解的情况
     ans.assign(m, 0);
-    
-    // 检查是否存在 0 = 1 的矛盾方程
+    // 检查是否有 0 = val 的矛盾方程
     for (int i = r; i < n; ++i) {
-        if (a[i][m]) return -1; // 无解
+        if (val[i] != 0) return -1; // 左边系数全为0，但右边常数项不为0，无解
     }
     
-    // 检查是否有自由元
-    if (r < m) return 1; // 有多解，自由元个数为 m - r
+    if (r < m) return 1; // 多解
     
     // 提取唯一解
     for (int i = 0; i < m; ++i) {
-        ans[i] = a[i][m];
+        ans[i] = val[i]; // 第 i 个未知数的解就是对应的常数项
     }
     return 0;
 }
