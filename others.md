@@ -1996,3 +1996,38 @@ for (int i = 0; i < n; i++) {
 
 // 现在 f[mask] = sum of g[supermask] for all supermask ⊇ mask
 ```
+
+### 三元环计数
+
+```
+for(int i=1;i<=m;i++) deg[u[i]]++,deg[v[i]]++;
+for(int i=1;i<=m;i++){
+	if(make_pair(deg[u[i]],u[i]) > make_pair(deg[v[i]],v[i])) swap(u[i],v[i]);
+	g[u[i]].pb(v[i]);
+}
+int ans=0;
+for(int i=1;i<=n;i++){
+	for(int j:g[i]) tim[j]=i;
+	for(int j:g[i]) for(int k:g[j]) if(tim[k]==i)
+        ans++;
+}
+```
+
+### 四元环计数
+
+```
+for(int i=1;i<=m;i++) deg[u[i]]++,deg[v[i]]++;
+for(int i=1;i<=m;i++){
+	if(make_pair(deg[u[i]],u[i]) > make_pair(deg[v[i]],v[i])) swap(u[i],v[i]);
+	g[u[i]].pb(v[i]);rg[v[i]].pb(u[i]);
+}
+int ans=0;
+for(int i=1;i<=n;i++){
+	int B1=0,B2=0,B3=0;
+	for(int j:g[i]) for(int k:g[j]) if(k^i) (B1+=cnt1[k])%=MOD,cnt1[k]++;
+	for(int j:rg[i]) for(int k:g[j]) if(k^i) (B2+=cnt1[k])%=MOD,(B3+=cnt2[k])%=MOD,cnt2[k]++;
+	for(int j:g[i]) for(int k:g[j]) cnt1[k]=0;
+	for(int j:rg[i]) for(int k:g[j]) cnt2[k]=0;
+	ans=(0ll+ans+B1+B2+1ll*INV2*B3)%MOD;
+}
+```
