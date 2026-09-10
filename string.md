@@ -24,46 +24,13 @@
 ## 1. 字符串哈希
 
 ```cpp
-struct Hash {
-    static constexpr int MOD = 1'000'000'007, BASE = 911382323;
-    int n;
-    vector<ll> h, p;
-    Hash(const string &s) : n(sz(s)), h(n + 1), p(n + 1) {
-        p[0] = 1;
-        for (int i = 0; i < n; i++) {
-            p[i+1] = p[i] * BASE % MOD;
-            h[i+1] = (h[i] * BASE + s[i]) % MOD;
-        }
-    }
-    // 子串 s[l..r) 的哈希值
-    ll get(int l, int r) const {
-        return (h[r] - h[l] * p[r-l] % MOD + MOD) % MOD;
-    }
-};
-
-// 双哈希：两套 (MOD, BASE) 组合，几乎不可能冲突
-struct Hash2 {
-    static constexpr int MOD = 1'000'000'009, BASE = 972663749;
-    int n;
-    vector<ll> h, p;
-    Hash2(const string &s) : n(sz(s)), h(n + 1), p(n + 1) {
-        p[0] = 1;
-        for (int i = 0; i < n; i++) {
-            p[i+1] = p[i] * BASE % MOD;
-            h[i+1] = (h[i] * BASE + s[i]) % MOD;
-        }
-    }
-    ll get(int l, int r) const {
-        return (h[r] - h[l] * p[r-l] % MOD + MOD) % MOD;
-    }
-};
-
-struct DoubleHash {
-    Hash h1;
-    Hash2 h2;
-    DoubleHash(const string &s) : h1(s), h2(s) {}
-    pair<ll,ll> get(int l, int r) const { return {h1.get(l, r), h2.get(l, r)}; }
-};
+ull Hash(string s)
+{
+    ull res = 0;
+    for(char c : s)
+        res = res * 131 + c;
+    return res;
+}
 ```
 
 ---
