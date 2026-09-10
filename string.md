@@ -50,17 +50,6 @@ vector<int> prefix_function(const string &s) {
     }
     return pi;
 }
-
-// 在 text 中查找 pattern 的所有出现起点
-vector<int> find_all(const string &pattern, const string &text) {
-    string s = pattern + '\1' + text;
-    auto pi = prefix_function(s);
-    int m = sz(pattern);
-    vector<int> occ;
-    for (int i = m + 1; i < sz(s); i++)
-        if (pi[i] == m) occ.push_back(i - 2 * m);
-    return occ;
-}
 ```
 
 **前缀函数应用：**
@@ -386,8 +375,6 @@ int lcs(const string &a, const string &b) {
     return pre[m];
 }
 ```
-
-需要还原 LCS 字符串时要保留二维 dp，参见 [string_applications.md](string_applications.md)。
 
 ---
 
