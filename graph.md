@@ -120,8 +120,11 @@ vector<ll> dijkstra(int s, int n, vector<vector<pair<int,int>>>& g) {
 
 ```cpp
 // SPFA + SLF 优化
-bool spfa(int s, int n, vector<vector<pair<int,int>>>& g, vector<ll>& dis) {
-    dis.assign(n + 1, INF); dis[s] = 0;
+int s, n;
+vector<pair<int, int>> g[N];
+ll dis[N];
+bool spfa() {
+    fill(dis + 1, dis + n + 1, INF); dis[s] = 0;
     vector<int> cnt(n + 1, 0), inq(n + 1, 0);
     deque<int> q; q.push_back(s); inq[s] = 1;
     while (!q.empty()) {
@@ -195,7 +198,7 @@ while (!q.empty()) {
 按边权排序 + 并查集，复杂度 $O(m \log m)$。
 
 ```cpp
-int f[N], s[N];
+int f[N];
 vector<tuple<int, int, int>> e;
 
 int find(int x) { 
@@ -205,14 +208,12 @@ int find(int x) {
 bool merge(int x, int y) {
     x = find(x); y = find(y);
     if (x == y) return false;
-    if (s[x] < s[y]) swap(x, y);
     f[y] = x; 
-    s[x] += s[y]; 
     return true;
 }
 
 ll kruskal(int n) {
-    for (int i = 0; i <= n; ++i) f[i] = i, s[i] = 1;
+    for (int i = 0; i <= n; ++i) f[i] = i;
 
     sort(e.begin(), e.end(), [](auto& a, auto& b) {
         return get<2>(a) < get<2>(b);
