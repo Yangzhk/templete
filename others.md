@@ -6,7 +6,7 @@
   - [矩阵运算类](#矩阵运算类)
   - [莫队](#莫队)
   - [xor 线性基](#xor-线性基)
-  - [异或线性基（XOR Basis）](#异或线性基xor-basis)
+  - [异或高斯消元](#异或高斯消元)
   - [mobius 函数 (反演)](#mobius-函数-反演)
   - [数论分块（整除分块）](#数论分块整除分块)
   - [exgcd 求 线性同余方程](#exgcd-求-线性同余方程)
@@ -110,6 +110,56 @@ struct matrix{
 };
 ```
 
+### 普通高斯消元
+```
+constexpr int N = 510;
+constexpr long double eps = 1e-12;
+
+int n;
+long double a[N][N + 1], ans[N];
+
+// 0: 无解
+// 1: 唯一解
+// 2: 无穷多解
+int gauss()
+{
+    int r = 1;
+
+    for(int c = 1; c <= n && r <= n; c++) {
+        int p = r;
+        for(int i = r; i <= n; i++)
+            if(fabsl(a[i][c]) > fabsl(a[p][c]))
+                p = i;
+
+        if(fabsl(a[p][c]) < eps) continue;
+
+        swap(a[p], a[r]);
+
+        for(int i = 1; i <= n; i++) {
+            if(i == r) continue;
+            if(fabsl(a[i][c]) < eps) continue;
+
+            long double t = a[i][c] / a[r][c];
+            for(int j = c; j <= n + 1; j++)
+                a[i][j] -= t * a[r][j];
+        }
+
+        r++;
+    }
+
+    for(int i = r; i <= n; i++)
+        if(fabsl(a[i][n + 1]) > eps)
+            return 0;
+
+    if(r <= n) return 2;
+
+    for(int i = 1; i <= n; i++)
+        ans[i] = a[i][n + 1] / a[i][i];
+
+    return 1;
+}
+```
+
 ### 莫队
 
 ```
@@ -131,73 +181,7 @@ while (R > r) remove_(a[R--]);
 ```
 ### xor 线性基
 
-### 异或线性基（XOR Basis）
-
-##### 数学形式
-
-考虑一个集合 $S = \{a_1, a_2, \dots, a_n\}$，其中每个元素为非负整数。
-
-在二进制表示下，将每个数视为 $\mathbb{F}_2$ 上的向量（即每一位是 $0/1$，运算为按位异或）。
-
-异或线性基是一组向量 $\{b_1, b_2, \dots, b_k\}$，满足：
-
-1. **线性无关性**：
-   $$
-   \forall i,\ b_i \ne \bigoplus_{j \ne i} c_j b_j,\quad c_j \in \{0,1\}
-   $$
-
-2. **张成性（生成原集合的线性空间）**：
-   $$
-   \forall x \in \text{span}(S),\quad x = \bigoplus_{i=1}^k c_i b_i,\quad c_i \in \{0,1\}
-   $$
-
-其中 $\oplus$ 表示按位异或运算。
-
----
-
-#### 维度与性质
-
-- 线性基大小 $k \le \lfloor \log_2(\max a_i) \rfloor + 1$
-- 可表示的不同数的个数为：
-  $$
-  2^k
-  $$
-- 表示方式唯一（在固定基的情况下）
-
----
-
-#### 能解决的问题类型
-
-##### 1. 最大 / 最小异或值
-
-- 求某个集合中选取若干数异或后的最大值：
-  $$
-  \max \bigoplus_{i \in T} a_i
-  $$
-
-- 或最小非零值
-
----
-
-##### 2. 判断可表示性
-
-- 判断某个数 $x$ 是否可以由集合 $S$ 异或得到：
-  $$
-  x \in \text{span}(S)\ ?
-  $$
-
----
-
-##### 3. 统计不同异或结果个数
-
-- 不同异或结果数量为：
-  $$
-  2^k
-  $$
-
----
-
-##### 4. 第 $k$ 小异或值
+#### 1. 第 $k$ 小异或值
 
 - 将线性基转为“标准形”（如高位优先的行最简形式）
 - 按二进制枚举组合求第 $k$ 小
@@ -205,7 +189,7 @@ while (R > r) remove_(a[R--]);
 ---
 
 
-##### 5. 图论问题
+#### 2. 图论问题
 
 - 在图上维护路径异或（如树上路径 xor、带环图）
 - 求：
@@ -214,7 +198,7 @@ while (R > r) remove_(a[R--]);
 
 ---
 
-##### 6. 区间 / 前缀问题
+#### 3. 区间 / 前缀问题
 
 - 前缀异或 + 线性基：
   - 区间最大 xor
