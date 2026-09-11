@@ -189,6 +189,88 @@ while (!q.empty()) {
     }
 }
 ```
+
+### Johnson 全源最短路
+```
+#include <vector>
+#include <queue>
+
+using namespace std;
+using ll = long long;
+
+const int N = 3005; // 根据题目最大点数调整
+const ll INF = 1e18;
+
+// g 存图，h 为势能数组，d 存所有起点到所有点的最短路
+vector<pair<int, ll>> g[N];
+ll h[N], d[N][N];
+int c[N];
+bool vis[N];
+
+bool spfa(int n) {
+    queue<int> q;
+    // 虚拟源点技巧：直接将所有点入队，距离设为 0
+    for (int i = 1; i <= n; ++i) {
+        h[i] = 0; 
+        vis[i] = 1; 
+        c[i] = 0;
+        q.push(i);
+    }
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        vis[u] = 0;
+        for (auto [v, w] : g[u]) {
+            if (h[v] > h[u] + w) {
+                h[v] = h[u] + w;
+                if (!vis[v]) {
+                    vis[v] = 1;
+                    q.push(v);
+                    if (++c[v] >= n) return false; // 存在负环
+                }
+            }
+        }
+    }
+    return true;
+}
+
+void dijkstra(int s, int n) {
+    for (int i = 1; i <= n; ++i) {
+        d[s][i] = INF; 
+        vis[i] = 0;
+    }
+    d[s][s] = 0;
+    
+    priority_queue<pair<ll, int>, vector<pair<ll, int>>, greater<>> q;
+    q.push({0, s});
+    
+    while (!q.empty()) {
+        auto [dist, u] = q.top(); q.pop();
+        if (vis[u]) continue;
+        vis[u] = 1;
+        for (auto [v, w] : g[u]) {
+            ll nw = w + h[u] - h[v]; // 核心：重赋非负边权
+            if (d[s][v] > d[s][u] + nw) {
+                d[s][v] = d[s][u] + nw;
+                q.push({d[s][v], v});
+            }
+        }
+    }
+    
+    // 还原真实的最短路长度
+    for (int i = 1; i <= n; ++i) {
+        if (d[s][i] != INF) {
+            d[s][i] += h[i] - h[s];
+        }
+    }
+}
+
+// 返回 false 说明图中有负权环
+bool johnson(int n) {
+    if (!spfa(n)) return false; 
+    for (int i = 1; i <= n; ++i) dijkstra(i, n);
+    return true;
+}
+```
 ---
 
 ## 最小生成树
@@ -238,6 +320,56 @@ ll kruskal(int n) {
 ### Borůvka
 
 每轮为每个连通块找最短出边并合并，$O(m \log n)$。**适用场景**：边由某种规则隐式生成（如完全图按位运算定义边权），无法显式建图时仍可逐位/逐组找最优出边。
+
+```
+int n, m;
+int fa[N];
+
+struct Edge {
+    int u, v, w;
+} e[M];
+
+int find(int x) {
+    return fa[x] == x ? x : fa[x] = find(fa[x]);
+}
+
+int boruvka() {
+    rep(i, 1, n) fa[i] = i;
+
+    int ans = 0, cnt = n;
+    vector<int> mn(n + 1, -1);
+
+    while(cnt > 1) {
+        fill(mn.begin(), mn.end(), -1);
+
+        rep(i, 1, m) {
+            int x = find(e[i].u), y = find(e[i].v);
+            if(x == y) continue;
+
+            if(mn[x] == -1 || e[i].w < e[mn[x]].w) mn[x] = i;
+            if(mn[y] == -1 || e[i].w < e[mn[y]].w) mn[y] = i;
+        }
+
+        bool ok = 0;
+
+        rep(i, 1, n) {
+            if(find(i) != i || mn[i] == -1) continue;
+
+            int id = mn[i];
+            int x = find(e[id].u), y = find(e[id].v);
+
+            if(x == y) continue;
+
+            fa[x] = y;
+            ans += e[id].w, cnt--, ok = true;
+        }
+
+        if(!ok) return -1;
+    }
+
+    return ans;
+}
+```
 
 ### 次小生成树
 
