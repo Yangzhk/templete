@@ -24,6 +24,8 @@
   - [集合操作（位运算）](#集合操作位运算)
   - [三元环计数](#三元环计数)
   - [四元环计数](#四元环计数)
+  - [弱周期引理](#弱周期引理)
+  - [fail-链路径压缩](#fail-链路径压缩)
 ---
 
 ### 模运算
@@ -2031,5 +2033,99 @@ for(int i=1;i<=n;i++){
 	for(int j:g[i]) for(int k:g[j]) cnt1[k]=0;
 	for(int j:rg[i]) for(int k:g[j]) cnt2[k]=0;
 	ans=(0ll+ans+B1+B2+1ll*INV2*B3)%MOD;
+}
+```
+
+### 弱周期引理
+```
+int fail[N], diff[N], top[N];
+
+void build(const string& s) {
+    int n = s.length();
+    fail[0] = fail[1] = 0;
+
+    // 1. 求基础 fail 数组
+    for (int i = 1, j = 0; i < n; i++) {
+        while (j > 0 && s[i] != s[j]) {
+            j = fail[j];
+        }
+        if (s[i] == s[j]) {
+            j++;
+        }
+        fail[i + 1] = j;
+    }
+
+    // 2. 划分 O(log N) 段等差数列
+    for (int i = 1; i <= n; i++) {
+        diff[i] = i - fail[i];
+        if (fail[i] > 0 && diff[i] == diff[fail[i]]) {
+            top[i] = top[fail[i]];
+        } else {
+            top[i] = fail[i];
+        }
+    }
+}
+
+// 演示：按等差数列“块”快速跳跃
+void jump(int len) {
+    for (int x = len; x > 0; x = top[x]) {
+        // 当前块（等差数列）的公差为 diff[x]
+        // 包含的 Border 长度集为: x, x - diff[x], x - 2*diff[x] ... 直到大于 top[x]
+        
+        // 批量 O(1) 转移 DP 等逻辑写在这里...
+        
+        /* 展开当前块的代码
+        for (int i = x; i > top[x]; i -= diff[x]) {
+            // ...
+        }
+        */
+    }
+}
+```
+
+### fail 链路径压缩
+fail[x]：普通 KMP，跳到下一个 border。
+fa[x]：在 fail 链上压缩掉一批“下一个字符相同”的 border，直接跳到第一个需要处理的位置。
+```
+int n;
+int fail[N], fa[N];
+char s[N];
+
+void solve()
+{
+    fail[1] = fa[1] = 0;
+
+    for(int i = 2; i <= n; i++) {
+        int p = fail[i - 1];
+
+        if(p && s[p + 1] == s[i])
+            fa[i - 1] = fa[p];
+        else
+            fa[i - 1] = p;
+
+        p = fail[i - 1];
+
+        while(p) {
+            int q = fa[p];
+
+            if(s[p + 1] != s[i]) {
+                while(p != q) {
+                    // 处理 border p
+                    p = fail[p];
+                }
+            }
+
+            p = q;
+        }
+
+        p = fail[i - 1];
+
+        while(p && s[p + 1] != s[i])
+            p = fail[p];
+
+        if(s[p + 1] == s[i]) p++;
+
+        fail[i] = p;
+    }
 }
 ```
