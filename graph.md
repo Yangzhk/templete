@@ -1050,18 +1050,32 @@ ll km() {
 有向图欧拉路径：弱连通且最多一个点 $|in - out| = 1$ 起点、一个 $|out - in| = 1$ 终点。
 
 ```cpp
-// 无向图，链式前向星 cnt 从 2 开始
-vector<int> path; int cur[N];
+int cur[N];
+bool vis[N];
+vector<pair<int,int>> g[N];
+vector<int> ans;
+
 void dfs(int u) {
-    for (int& i = cur[u]; i; ) {
-        int v = e[i].to;
-        if (vis[i / 2]) { i = e[i].nxt; continue; }
-        vis[i / 2] = 1; i = e[i].nxt;
+    while(cur[u] < g[u].size()) {
+        auto [v, id] = g[u][cur[u]++];
+        if(vis[id]) continue;
+        vis[id] = 1;
         dfs(v);
     }
-    path.push_back(u);
+    ans.push_back(u);
 }
-// 最后 reverse(path)，即欧拉路径
+
+void solve() {
+    int s = 1;
+    rep(i, 1, n)
+        if(g[i].size() & 1) {
+            s = i;
+            break;
+        }
+
+    dfs(s);
+    reverse(ans.begin(), ans.end());
+}
 ```
 
 **应用**：一笔画问题、Eulerian 序列拼接。
@@ -1118,32 +1132,6 @@ ll stoerWagner() {
 }
 ```
 
-### Gomory-Hu 树
-
-无向图，构造一棵 $n-1$ 条边的等价"最小割树"：树上 $u,v$ 路径最小边权 = 原图 $u,v$ 最小割。$n-1$ 次最大流即可构造。
-
-```cpp
-int parent[N]; ll cutVal[N];
-void buildGH(int n) {
-    for (int i = 1; i <= n; i++) parent[i] = 1;
-    for (int s = 2; s <= n; s++) {
-        // 复原网络容量
-        ll f = maxflow(s, parent[s]);
-        cutVal[s] = f;
-        // BFS 标记 s 一侧
-        for (int i = s + 1; i <= n; i++)
-            if (sideOfSrc(i) && parent[i] == parent[s]) parent[i] = s;
-    }
-}
-```
-
-**应用**：多组 $u,v$ 询问最小割，建树后路径最小值即可。
-
-### 支配树（Lengauer-Tarjan）
-
-有向图固定起点 $r$，$u$ 的"支配点" = 所有从 $r$ 到 $u$ 的路径必经的点；支配树是这些支配关系构成的树。
-
-复杂度 $O((n+m)\alpha(n))$ 或 $O((n+m)\log n)$。常用于编译器分析，竞赛中较少出现，遇到即"金牌题"。
 
 ### Prüfer 序列
 
