@@ -27,6 +27,7 @@
   - [四元环计数](#四元环计数)
   - [弱周期引理](#弱周期引理)
   - [fail-链路径压缩](#fail-链路径压缩)
+  - [ntt-拉差](#ntt-拉差)
 ---
 
 ### 模运算
@@ -2113,4 +2114,132 @@ void solve()
         fail[i] = p;
     }
 }
+```
+### ntt 拉差
+```
+#define int long long
+
+constexpr int mod = 998244353;
+constexpr int G = 3;
+using poly = vector<int>;
+
+int qpow(int a, int b)
+{
+    int r = 1;
+    while(b) {
+        if(b & 1) r = r * a % mod;
+        a = a * a % mod;
+        b >>= 1;
+    }
+    return r;
+}
+
+void ntt(poly &a, bool inv)
+{
+    int n = a.size();
+    static vector<int> rev;
+    rev.resize(n);
+    for(int i = 1; i < n; i++)
+        rev[i] = (rev[i >> 1] >> 1) | ((i & 1) ? n >> 1 : 0);
+
+    for(int i = 0; i < n; i++)
+        if(i < rev[i]) swap(a[i], a[rev[i]]);
+
+    for(int len = 2; len <= n; len <<= 1) {
+        int wn = qpow(G, (mod - 1) / len);
+        if(inv) wn = qpow(wn, mod - 2);
+        for(int i = 0; i < n; i += len) {
+            int w = 1;
+            for(int j = 0; j < len / 2; j++) {
+                int x = a[i + j];
+                int y = w * a[i + j + len / 2] % mod;
+                a[i + j] = (x + y) % mod;
+                a[i + j + len / 2] = (x - y + mod) % mod;
+                w = w * wn % mod;
+            }
+        }
+    }
+
+    if(inv) {
+        int iv = qpow(n, mod - 2);
+        for(auto &x : a) x = x * iv % mod;
+    }
+}
+
+poly mul(poly a, poly b)
+{
+    if(a.empty() || b.empty()) return {};
+    int len = a.size() + b.size() - 1;
+    int n = 1;
+    while(n < len) n <<= 1;
+    a.resize(n);
+    b.resize(n);
+    ntt(a, 0);
+    ntt(b, 0);
+    for(int i = 0; i < n; i++) a[i] = a[i] * b[i] % mod;
+    ntt(a, 1);
+    a.resize(len);
+    return a;
+}
+
+// 一般拉格朗日插值 O(n^2)
+// 已知 (x[i], y[i])，求 f(k)
+int lagrange(const vector<int> &x, const vector<int> &y, int k)
+{
+    int n = x.size();
+    k = (k % mod + mod) % mod;
+
+    int ans = 0;
+    for(int i = 0; i < n; i++) {
+        int a = 1, b = 1;
+        for(int j = 0; j < n; j++) {
+            if(i == j) continue;
+            a = a * ((k - x[j]) % mod + mod) % mod;
+            b = b * ((x[i] - x[j]) % mod + mod) % mod;
+        }
+        ans = (ans + y[i] * a % mod * qpow(b, mod - 2)) % mod;
+    }
+    return ans;
+}
+
+// 连续点拉格朗日插值 O(n)
+// y[0] = f(1), y[1] = f(2), ..., y[n-1] = f(n)
+int lagrange_continuous(const vector<int> &y, int k)
+{
+    int n = y.size();
+    if(1 <= k && k <= n) return y[k - 1];
+
+    int K = (k % mod + mod) % mod;
+
+    vector<int> fac(n + 1), ifac(n + 1);
+    vector<int> pre(n + 2), suf(n + 2);
+
+    fac[0] = 1;
+    for(int i = 1; i <= n; i++) fac[i] = fac[i - 1] * i % mod;
+    ifac[n] = qpow(fac[n], mod - 2);
+    for(int i = n; i >= 1; i--) ifac[i - 1] = ifac[i] * i % mod;
+
+    pre[0] = 1;
+    for(int i = 1; i <= n; i++)
+        pre[i] = pre[i - 1] * ((K - i + mod) % mod) % mod;
+
+    suf[n + 1] = 1;
+    for(int i = n; i >= 1; i--)
+        suf[i] = suf[i + 1] * ((K - i + mod) % mod) % mod;
+
+    int ans = 0;
+    for(int i = 1; i <= n; i++) {
+        int t = y[i - 1] * pre[i - 1] % mod * suf[i + 1] % mod;
+        t = t * ifac[i - 1] % mod * ifac[n - i] % mod;
+        if((n - i) & 1) t = (mod - t) % mod;
+        ans = (ans + t) % mod;
+    }
+    return ans;
+}
+
+signed main()
+{
+    return 0;
+}
+
 ```
