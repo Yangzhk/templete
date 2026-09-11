@@ -37,11 +37,10 @@
 - [欧拉与哈密顿](#欧拉与哈密顿)
   - [Hierholzer 欧拉路径](#hierholzer-欧拉路径)
   - [状压 Hamilton DP](#状压-hamilton-dp)
-- [其他高阶算法](#其他高阶算法)
-  - [Stoer-Wagner 全局最小割](#stoer-wagner-全局最小割)
-  - [Prüfer 序列](#prüfer-序列)
-  - [Kirchhoff 矩阵树定理](#kirchhoff-矩阵树定理)
-  - [BEST 定理](#best-定理)
+- [Stoer-Wagner 全局最小割](#stoer-wagner-全局最小割)
+- [Prüfer 序列](#prüfer-序列)
+- [Kirchhoff 矩阵树定理](#kirchhoff-矩阵树定理)
+- [BEST 定理](#best-定理)
 
 ---
 
