@@ -541,35 +541,6 @@ $$
 
 给定 $n$ 个点 $(x_i, y_i)$，构造度 $< n$ 的多项式。先构造 $M(x) = \prod (x - x_i)$，再合成除法求 $M(x) / (x - x_i)$，$O(n^2)$。$n$ 大时改用 [快速插值](#快速插值)。
 
-```cpp
-    static Poly lagrange(const vector<int>& xs, const vector<int>& ys) {
-        int n = (int)xs.size();
-        vector<int> M(n + 1, 0); M[0] = 1;
-        for (int i = 0; i < n; i++) {
-            int xi = xs[i];
-            for (int k = i; k >= 0; k--) {
-                M[k + 1] = (M[k + 1] + M[k]) % mod;
-                M[k]     = (mod - 1ll * xi * M[k] % mod) % mod;
-            }
-        }
-        Poly r; r.a.assign(n, 0);
-        for (int i = 0; i < n; i++) {
-            int xi = xs[i];
-            vector<int> Q(n, 0);
-            Q[n - 1] = M[n];
-            for (int k = n - 1; k >= 1; k--)
-                Q[k - 1] = (M[k] + 1ll * xi * Q[k]) % mod;
-            int den = 1;
-            for (int j = 0; j < n; j++) if (j != i)
-                den = 1ll * den * (xi - xs[j] + mod) % mod;
-            int co = 1ll * ys[i] * inv_mod(den) % mod;
-            for (int k = 0; k < n; k++)
-                r.a[k] = (r.a[k] + 1ll * co * Q[k]) % mod;
-        }
-        return r;
-    }
-```
-
 ### 连续点值插值
 
 已知 $f(1), f(2), \dots, f(n)$，求 $f(k)$，$k$ 可达 $10^{18}$。
@@ -579,6 +550,61 @@ f(k) = \sum_{i=1}^{n} y_{i-1} \cdot \frac{\text{pre}_{i-1} \cdot \text{suf}_{i+1
 $$
 
 线性预处理阶乘逆元和前后缀积，$O(n)$。
+
+```
+ll qpow(ll a, ll b, ll p) {
+    ll r = 1;
+    a %= p;
+    for (; b; b >>= 1, a = a * a % p) {
+        if (b & 1) r = r * a % p;
+    }
+    return r;
+}
+
+// 1. 一般拉格朗日插值 O(n^2)
+// x, y 为坐标，求横坐标为 k 时的值，p 为模数
+ll f1(vector<ll>& x, vector<ll>& y, ll k, ll p) {
+    int n = x.size();
+    ll r = 0;
+    for (int i = 0; i < n; ++i) {
+        ll a = 1, b = 1;
+        for (int j = 0; j < n; ++j) {
+            if (i == j) continue;
+            a = a * (k - x[j] % p + p) % p;
+            b = b * (x[i] % p - x[j] % p + p) % p;
+        }
+        r = (r + y[i] % p * a % p * qpow(b, p - 2, p)) % p;
+    }
+    return r;
+}
+
+// 2. 连续点值拉格朗日插值 O(n)
+// y 为 x = 1, 2, ..., n 时的值，求 x = k 时的值，p 为模数
+ll f2(vector<ll>& y, ll k, ll p) {
+    int n = y.size();
+    if (k >= 1 && k <= n) return y[k - 1];
+
+    vector<ll> L(n + 2, 1), R(n + 2, 1);
+    vector<ll> F(n + 1, 1), I(n + 1, 1);
+
+    // F: 阶乘, I: 阶乘逆元
+    for (int i = 1; i <= n; ++i) F[i] = F[i - 1] * i % p;
+    I[n] = qpow(F[n], p - 2, p);
+    for (int i = n - 1; i >= 0; --i) I[i] = I[i + 1] * (i + 1) % p;
+
+    // L: 前缀积, R: 后缀积
+    for (int i = 1; i <= n; ++i) L[i] = L[i - 1] * (k - i % p + p) % p;
+    for (int i = n; i >= 1; --i) R[i] = R[i + 1] * (k - i % p + p) % p;
+
+    ll r = 0;
+    for (int i = 1; i <= n; ++i) {
+        ll a = L[i - 1] * R[i + 1] % p;
+        ll b = I[i - 1] * I[n - i] % p;
+        if ((n - i) & 1) b = p - b;
+        r = (r + y[i - 1] % p * a % p * b) % p;
+    }
+    return r;
+}
 
 ```cpp
     static int lagrange_continuous(const vector<int>& y, long long k) {
