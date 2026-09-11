@@ -72,6 +72,60 @@ vector<int> min_borders(const string &s) {
 }
 ```
 
+**弱周期引理:**
+```
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+const int N = 1000005; // 根据实际题目修改大小
+
+int fail[N], diff[N], top[N];
+
+void build(const string& s) {
+    int n = s.length();
+    fail[0] = fail[1] = 0;
+
+    // 1. 求基础 fail 数组
+    for (int i = 1, j = 0; i < n; i++) {
+        while (j > 0 && s[i] != s[j]) {
+            j = fail[j];
+        }
+        if (s[i] == s[j]) {
+            j++;
+        }
+        fail[i + 1] = j;
+    }
+
+    // 2. 划分 O(log N) 段等差数列
+    for (int i = 1; i <= n; i++) {
+        diff[i] = i - fail[i];
+        if (fail[i] > 0 && diff[i] == diff[fail[i]]) {
+            top[i] = top[fail[i]];
+        } else {
+            top[i] = fail[i];
+        }
+    }
+}
+
+// 演示：按等差数列“块”快速跳跃
+void jump(int len) {
+    for (int x = len; x > 0; x = top[x]) {
+        // 当前块（等差数列）的公差为 diff[x]
+        // 包含的 Border 长度集为: x, x - diff[x], x - 2*diff[x] ... 直到大于 top[x]
+        
+        // 批量 O(1) 转移 DP 等逻辑写在这里...
+        
+        /* 展开当前块的代码
+        for (int i = x; i > top[x]; i -= diff[x]) {
+            // ...
+        }
+        */
+    }
+}
+```
+
 ---
 
 ## 3. Z 函数
