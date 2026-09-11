@@ -4,16 +4,13 @@
 
 - [图的存储](#图的存储)
 - [最短路](#最短路)
-  - [Dijkstra（堆优化）](#dijkstra堆优化)
   - [SPFA / Bellman-Ford](#spfa--bellman-ford)
   - [Floyd-Warshall](#floyd-warshall)
-  - [0-1 BFS](#0-1-bfs)
+  - [Johnson-全源最短路](#Johnson-全源最短路)
 - [最小生成树](#最小生成树)
   - [Kruskal](#kruskal)
   - [Prim（堆优化）](#prim堆优化)
   - [Borůvka](#borůvka)
-  - [次小生成树](#次小生成树)
-  - [朱刘算法（有向最小树形图）](#朱刘算法有向最小树形图)
 - [连通性](#连通性)
   - [Tarjan 强连通分量](#tarjan-强连通分量)
   - [割点与桥](#割点与桥)
@@ -23,8 +20,6 @@
 - [拓扑排序与 DAG](#拓扑排序与-dag)
 - [树上算法](#树上算法)
   - [树哈希](#树哈希)
-  - [倍增 LCA](#倍增-lca)
-  - [Tarjan 离线 LCA](#tarjan-离线-lca)
   - [树链剖分（HLD）](#树链剖分hld)
   - [DSU on Tree](#dsu-on-tree)
   - [长链剖分](#长链剖分)
@@ -32,7 +27,6 @@
   - [虚树](#虚树)
 - [网络流](#网络流)
   - [Dinic 最大流](#dinic-最大流)
-  - [HLPP 最高标号预流推进](#hlpp-最高标号预流推进)
   - [MCMF 最小费用最大流](#mcmf-最小费用最大流)
   - [上下界网络流](#上下界网络流)
   - [最大权闭合子图](#最大权闭合子图)
@@ -40,14 +34,11 @@
   - [匈牙利算法](#匈牙利算法)
   - [Hopcroft-Karp](#hopcroft-karp)
   - [KM 算法（二分图最大权完美匹配）](#km-算法二分图最大权完美匹配)
-  - [带花树（一般图最大匹配）](#带花树一般图最大匹配)
 - [欧拉与哈密顿](#欧拉与哈密顿)
   - [Hierholzer 欧拉路径](#hierholzer-欧拉路径)
   - [状压 Hamilton DP](#状压-hamilton-dp)
 - [其他高阶算法](#其他高阶算法)
   - [Stoer-Wagner 全局最小割](#stoer-wagner-全局最小割)
-  - [Gomory-Hu 树](#gomory-hu-树)
-  - [支配树（Lengauer-Tarjan）](#支配树lengauer-tarjan)
   - [Prüfer 序列](#prüfer-序列)
   - [Kirchhoff 矩阵树定理](#kirchhoff-矩阵树定理)
   - [BEST 定理](#best-定理)
@@ -145,24 +136,6 @@ for (int k = 1; k <= n; k++) {
     for (int i = 1; i <= n; i++)
         for (int j = 1; j <= n; j++)
             d[i][j] = min(d[i][j], d[i][k] + d[k][j]);
-}
-```
-
-### 0-1 BFS
-
-边权只有 0/1 时，用 deque 替代堆，复杂度 $O(n + m)$。
-
-```cpp
-deque<int> q; q.push_front(s); dis[s] = 0;
-while (!q.empty()) {
-    int u = q.front(); q.pop_front();
-    for (auto [v, w] : g[u]) {
-        if (dis[u] + w < dis[v]) {
-            dis[v] = dis[u] + w;
-            if (w == 0) q.push_front(v);
-            else q.push_back(v);
-        }
-    }
 }
 ```
 
@@ -690,15 +663,6 @@ struct Dinic {
 
 **应用**：二分图匹配、最小割、项目选择、棋盘覆盖、区间调度。
 
-### HLPP 最高标号预流推进
-
-复杂度 $O(V^2 \sqrt E)$，理论与实际都比 Dinic 更快，常用于大规模流图（金牌常用）。
-
-```cpp
-// 核心：维护高度 h[u]，按"高度桶 + gap 优化"循环 push & relabel
-// 实现较长，比赛中通常用 Dinic，遇到 1e5 节点的稠密流时再考虑 HLPP
-```
-
 ### MCMF 最小费用最大流
 
 SPFA 求最短增广路 + Dinic 多路增广。
@@ -848,12 +812,6 @@ ll km() {
 ```
 
 **应用**：分配问题（n 个工人 n 个任务，最大化收益）。**注意**：求最小权时取负或用 INF - w。
-
-### 带花树（一般图最大匹配）
-
-非二分图最大匹配，$O(VE)$ 或 $O(V^3)$。**核心**：BFS 时遇到奇环（"花"），将整条花路径上的点缩成一个点继续 BFS。
-
-实现长（200+ 行），仅在题目明确"非二分图最大匹配"时使用，否则尽量转二分图。
 
 ---
 
