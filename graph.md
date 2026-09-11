@@ -88,30 +88,6 @@ g[u].push_back({v, w});
 
 ## 最短路
 
-### Dijkstra（堆优化）
-
-复杂度 $O((n+m)\log m)$，**只适用于非负边权**。
-
-```cpp
-const ll INF = 1e18;
-vector<ll> dijkstra(int s, int n, vector<vector<pair<int,int>>>& g) {
-    vector<ll> dis(n + 1, INF);
-    priority_queue<pair<ll,int>, vector<pair<ll,int>>, greater<>> pq;
-    dis[s] = 0; pq.push({0, s});
-    while (!pq.empty()) {
-        auto [d, u] = pq.top(); pq.pop();
-        if (d > dis[u]) continue; // 关键剪枝
-        for (auto [v, w] : g[u]) {
-            if (dis[u] + w < dis[v]) {
-                dis[v] = dis[u] + w;
-                pq.push({dis[v], v});
-            }
-        }
-    }
-    return dis;
-}
-```
-
 **应用**：单源最短路；BFS 推广；分层图最短路（拆点：`dis[u][k]` 表示到 $u$ 用了 $k$ 次特殊操作）。
 
 ### SPFA / Bellman-Ford
@@ -279,40 +255,6 @@ bool johnson(int n) {
 
 按边权排序 + 并查集，复杂度 $O(m \log m)$。
 
-```cpp
-int f[N];
-vector<tuple<int, int, int>> e;
-
-int find(int x) { 
-    return f[x] == x ? x : f[x] = find(f[x]); 
-}
-
-bool merge(int x, int y) {
-    x = find(x); y = find(y);
-    if (x == y) return false;
-    f[y] = x; 
-    return true;
-}
-
-ll kruskal(int n) {
-    for (int i = 0; i <= n; ++i) f[i] = i;
-
-    sort(e.begin(), e.end(), [](auto& a, auto& b) {
-        return get<2>(a) < get<2>(b);
-    });
-    
-    ll r = 0; 
-    int c = 0;
-    for (auto [u, v, w] : e) {
-        if (merge(u, v)) { 
-            r += w; 
-            if (++c == n - 1) break; 
-        }
-    }
-    return c == n - 1 ? r : -1;
-}
-```
-
 ### Prim（堆优化）
 
 复杂度 $O((n+m)\log n)$，稠密图比 Kruskal 慢，常用 Kruskal。
@@ -370,70 +312,6 @@ int boruvka() {
     return ans;
 }
 ```
-
-### 次小生成树
-
-先求 MST；对每条非树边 $(u,v,w)$，求树上 $u \to v$ 路径上的最大边权 $\max1$ 和严格次大边权 $\max2$；用 $w - \max1$（或 $w - \max2$ 当 $w = \max1$）更新答案。倍增维护即可。
-
-```cpp
-// 倍增维护路径上最大、次大边权
-int up[N][LOG], mx1[N][LOG], mx2[N][LOG];
-void dfsLCA(int u, int p) {
-    for (int k = 1; k < LOG; k++) {
-        int m = up[u][k-1];
-        up[u][k] = up[m][k-1];
-        mx1[u][k] = max(mx1[u][k-1], mx1[m][k-1]);
-        mx2[u][k] = max(mx2[u][k-1], mx2[m][k-1]);
-        if (mx1[u][k-1] != mx1[m][k-1])
-            mx2[u][k] = max(mx2[u][k], min(mx1[u][k-1], mx1[m][k-1]));
-    }
-    // ...
-}
-```
-
-### 朱刘算法（有向最小树形图）
-
-固定根 $r$，求所有点到 $r$ 可达的最小有向生成树，$O(VE)$。
-
-```cpp
-struct Edge { int u, v; ll w; };
-ll zhuLiu(int r, int n, vector<Edge>& es) {
-    ll res = 0;
-    while (true) {
-        vector<ll> in(n + 1, INF);
-        vector<int> pre(n + 1, -1);
-        for (auto& e : es) if (e.u != e.v && e.w < in[e.v])
-            in[e.v] = e.w, pre[e.v] = e.u;
-        in[r] = 0;
-        for (int i = 1; i <= n; i++) if (in[i] == INF) return -1;
-        // 找环
-        vector<int> id(n + 1, -1), vis(n + 1, -1);
-        int cnt = 0;
-        for (int i = 1; i <= n; i++) {
-            res += in[i];
-            int v = i;
-            while (vis[v] != i && id[v] == -1 && v != r)
-                vis[v] = i, v = pre[v];
-            if (v != r && id[v] == -1) {
-                ++cnt;
-                for (int u = pre[v]; u != v; u = pre[u]) id[u] = cnt;
-                id[v] = cnt;
-            }
-        }
-        if (cnt == 0) return res; // 无环则结束
-        for (int i = 1; i <= n; i++) if (id[i] == -1) id[i] = ++cnt;
-        // 缩点
-        for (auto& e : es) {
-            ll w = e.w - in[e.v];
-            e.u = id[e.u]; e.v = id[e.v]; e.w = w;
-        }
-        n = cnt; r = id[r];
-    }
-}
-```
-
-**应用**：每个节点选一条入边的最小代价（如某些"分配问题"）。
-
 ---
 
 ## 连通性
@@ -592,15 +470,11 @@ vector<int> topo(int n, vector<vector<int>>& g) {
 ### 树哈希
 
 ```
-#include <cctype>
-#include <iostream>
-#include <random>
-#include <set>
-#include <vector>
-
+//树同构
 using ull = unsigned long long;
 
-const ull mask = std::mt19937_64(time(nullptr))();
+mt19937_64 rd(time(0));
+const ull mask = rd();
 
 ull shift(ull x) {
   x ^= mask;
@@ -615,80 +489,21 @@ constexpr int N = 1e6 + 10;
 
 int n;
 ull hash[N];
-std::vector<int> edge[N];
-std::set<ull> trees;
+std::vector<int> e[N];
 
 void getHash(int x, int p) {
   hash[x] = 1;
-  for (int i : edge[x]) {
+  for (int i : e[x]) {
     if (i == p) {
       continue;
     }
     getHash(i, x);
     hash[x] += shift(hash[i]);
   }
-  trees.insert(hash[x]);
 }
 
-using std::cin;
-using std::cout;
-
-int main() {
-  cin.tie(nullptr)->sync_with_stdio(false);
-  cin >> n;
-  for (int i = 1; i < n; i++) {
-    int u, v;
-    cin >> u >> v;
-    edge[u].push_back(v);
-    edge[v].push_back(u);
-  }
-  getHash(1, 0);
-  cout << trees.size();
-}
 ```
 
-### 倍增 LCA
-
-$O((n+q)\log n)$ 预处理 + 查询。
-
-```cpp
-const int LOG = 20;
-int dep[N], up[N][LOG];
-
-void dfs(int u, int p) {
-    up[u][0] = p; dep[u] = dep[p] + 1;
-    for (int k = 1; k < LOG; k++) up[u][k] = up[up[u][k-1]][k-1];
-    for (int v : g[u]) if (v != p) dfs(v, u);
-}
-
-int lca(int u, int v) {
-    if (dep[u] < dep[v]) swap(u, v);
-    int d = dep[u] - dep[v];
-    for (int k = 0; k < LOG; k++) if (d >> k & 1) u = up[u][k];
-    if (u == v) return u;
-    for (int k = LOG - 1; k >= 0; k--)
-        if (up[u][k] != up[v][k]) u = up[u][k], v = up[v][k];
-    return up[u][0];
-}
-```
-
-### Tarjan 离线 LCA
-
-$O((n+q)\alpha)$，把所有询问按端点挂载，DFS 回溯时合并并查集。
-
-```cpp
-int fa[N], vis[N], ans[Q];
-vector<pair<int,int>> qry[N]; // {另一端, 询问编号}
-
-int find(int x) { return fa[x] == x ? x : fa[x] = find(fa[x]); }
-
-void tarjanLCA(int u, int p) {
-    fa[u] = u;
-    for (int v : g[u]) if (v != p) { tarjanLCA(v, u); fa[v] = u; }
-    vis[u] = 1;
-    for (auto [v, id] : qry[u]) if (vis[v]) ans[id] = find(v);
-}
-```
 
 ### 树链剖分（HLD）
 
