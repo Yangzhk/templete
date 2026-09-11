@@ -8,8 +8,6 @@
   - [SPFA / Bellman-Ford](#spfa--bellman-ford)
   - [Floyd-Warshall](#floyd-warshall)
   - [0-1 BFS](#0-1-bfs)
-  - [Johnson 全源最短路](#johnson-全源最短路)
-  - [K 短路（A\*）](#k-短路a)
 - [最小生成树](#最小生成树)
   - [Kruskal](#kruskal)
   - [Prim（堆优化）](#prim堆优化)
@@ -188,39 +186,6 @@ while (!q.empty()) {
     }
 }
 ```
-
-### Johnson 全源最短路
-
-带负权边时求全源最短路。复杂度 $O(nm \log m)$。
-
-**思路**：新增超级源 $0$ 连向所有点（边权 $0$），跑 Bellman-Ford 得到势函数 $h[u]$；将每条边 $(u,v,w)$ 改为 $w + h[u] - h[v] \ge 0$，再以每点为源跑 Dijkstra；最后还原 $dis[u][v] - h[u] + h[v]$。
-
-### K 短路（A\*）
-
-单起点单终点 K 短路：先反向图跑 Dijkstra 得 $h[u]$（启发函数 = 终点到 $u$ 的最短路），再正向 A\* 用 `f = g + h` 出堆，第 $k$ 次出终点即第 $k$ 短。
-
-```cpp
-struct Node { ll g, f; int u; bool operator>(const Node& o) const { return f > o.f; } };
-ll kth(int s, int t, int K) {
-    auto h = dijkstra_rev(t);
-    if (h[s] == INF) return -1;
-    priority_queue<Node, vector<Node>, greater<>> pq;
-    pq.push({0, h[s], s});
-    vector<int> cnt(n + 1, 0);
-    while (!pq.empty()) {
-        auto [g, f, u] = pq.top(); pq.pop();
-        if (++cnt[u] > K) continue;
-        if (u == t && cnt[u] == K) return g;
-        for (auto [v, w] : G[u])
-            if (cnt[v] < K && h[v] != INF)
-                pq.push({g + w, g + w + h[v], v});
-    }
-    return -1;
-}
-```
-
-更高效的金牌做法：**可持久化左偏树**优化，复杂度 $O((n + m) \log n + K \log K)$。
-
 ---
 
 ## 最小生成树
@@ -230,28 +195,38 @@ ll kth(int s, int t, int K) {
 按边权排序 + 并查集，复杂度 $O(m \log m)$。
 
 ```cpp
-struct DSU {
-    vector<int> fa, sz;
-    DSU(int n) : fa(n + 1), sz(n + 1, 1) { iota(fa.begin(), fa.end(), 0); }
-    int find(int x) { return fa[x] == x ? x : fa[x] = find(fa[x]); }
-    bool merge(int x, int y) {
-        x = find(x); y = find(y);
-        if (x == y) return false;
-        if (sz[x] < sz[y]) swap(x, y);
-        fa[y] = x; sz[x] += sz[y]; return true;
-    }
-};
+int f[N], s[N];
+vector<tuple<int, int, int>> e;
 
-ll kruskal(int n, vector<tuple<int,int,int>>& edges) {
-    sort(edges.begin(), edges.end(), [](auto& a, auto& b) {
+int find(int x) { 
+    return f[x] == x ? x : f[x] = find(f[x]); 
+}
+
+bool merge(int x, int y) {
+    x = find(x); y = find(y);
+    if (x == y) return false;
+    if (s[x] < s[y]) swap(x, y);
+    f[y] = x; 
+    s[x] += s[y]; 
+    return true;
+}
+
+ll kruskal(int n) {
+    for (int i = 0; i <= n; ++i) f[i] = i, s[i] = 1;
+
+    sort(e.begin(), e.end(), [](auto& a, auto& b) {
         return get<2>(a) < get<2>(b);
     });
-    DSU d(n);
-    ll res = 0; int cnt = 0;
-    for (auto [u, v, w] : edges) {
-        if (d.merge(u, v)) { res += w; if (++cnt == n - 1) break; }
+    
+    ll r = 0; 
+    int c = 0;
+    for (auto [u, v, w] : e) {
+        if (merge(u, v)) { 
+            r += w; 
+            if (++c == n - 1) break; 
+        }
     }
-    return cnt == n - 1 ? res : -1;
+    return c == n - 1 ? r : -1;
 }
 ```
 
