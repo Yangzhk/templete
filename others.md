@@ -33,7 +33,7 @@
 ### 模运算
 
 ```
-int fac[N], inv[N], pow2[N];
+int fac[N], inv[N];
 
 int qpow(int a, int v = P - 2){
     int res = 1;
