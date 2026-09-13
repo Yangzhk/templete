@@ -297,6 +297,7 @@ struct PrefixBasis {
 
 ### 异或高斯消元
 ```
+//增广矩阵版本
 const int MAXN = 1005;
 
 bitset<MAXN> a[MAXN];  // 仅存储未知数的系数 (0 或 1)
@@ -337,6 +338,46 @@ int gauss_xor(int n, int m, vector<long long>& ans) {
         ans[i] = val[i]; // 第 i 个未知数的解就是对应的常数项
     }
     return 0;
+}
+```
+
+```
+//系数矩阵行阶梯型/行最简型
+void gaussxor() {
+	int r = 1;
+	
+	for(int j = 1; j <= m && r <= n; j++) {
+	    int p = 0;
+	
+	    for(int i = r; i <= n; i++) {
+	        if(a[i][j]) {
+	            p = i;
+	            break;
+	        }
+	    }
+	
+	    if(!p) continue;
+	
+	    swap(a[r], a[p]);
+	    swap(from[r], from[p]);
+
+		//行阶梯型
+	    for(int i = r + 1; i <= n; i++) {
+	        if(a[i][j]) {
+	            a[i] ^= a[r];
+	            from[i] ^= from[r];
+	        }
+	    }
+		/*行最简型
+		for(int i = 1; i <= n; i++) {
+		    if(i != r && a[i][j]) {
+		        a[i] ^= a[r];
+		        from[i] ^= from[r];
+		    }
+		}
+		*/
+	    r++;
+	}
 }
 ```
 
