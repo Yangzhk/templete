@@ -33,12 +33,12 @@
 ### 模运算
 
 ```
-Z fac[N], inv[N], pow2[N];
- 
-Z qpow(Z a, int v = P - 2){
-    Z res = 1;
-    for(; v; a *= a, v >>= 1){
-        if(v & 1) res *= a;
+int fac[N], inv[N], pow2[N];
+
+int qpow(int a, int v = P - 2){
+    int res = 1;
+    for(; v; a = a * a % mod, v >>= 1){
+        if(v & 1) res = res * a % mod;
     }
     return res;
 }
@@ -46,20 +46,21 @@ Z qpow(Z a, int v = P - 2){
 void init(){
     fac[0] = 1;
     for(int i = 1; i <= N - 10; i++){
-        fac[i] = fac[i-1] * i;
+        fac[i] = fac[i-1] * i % mod;
     }
-    inv[N - 10] = qpow(fac[N - 10]);
+    inv[N - 10] = qpow(fac[N - 10], mod - 2);
  
     for(int i = N - 11; i >= 0; i--) {
-        inv[i] = inv[i+1] * (i+1);
+        inv[i] = inv[i+1] * (i+1) % mod;
     }
 
 }
 
-Z C(int x, int y){
+int C(int x, int y){
     if(x < y || x < 0 || y < 0) return 0;
-    return fac[x] * inv[y] * inv[x - y];
+    return (fac[x] * inv[y]) % mod * inv[x - y] % mod;
 }
+
 ```
 
 ### 矩阵运算类
