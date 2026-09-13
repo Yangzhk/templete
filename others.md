@@ -296,6 +296,7 @@ struct PrefixBasis {
 ```
 
 ### 异或高斯消元
+**1. 增广矩阵:**
 ```
 //增广矩阵版本
 const int MAXN = 1005;
@@ -340,7 +341,7 @@ int gauss_xor(int n, int m, vector<long long>& ans) {
     return 0;
 }
 ```
-
+**2. 系数矩阵:**
 ```
 //系数矩阵行阶梯型/行最简型
 void gaussxor() {
@@ -378,6 +379,36 @@ void gaussxor() {
 		*/
 	    r++;
 	}
+}
+```
+
+**3. 在线维护行最简型**
+```
+//边插入边维护
+const int B = 63;
+unsigned long long p[B];
+
+bool insert(unsigned long long x)
+{
+    for(int i = 0; i < B; i++) {
+        if(!((x >> i) & 1)) continue;
+
+        if(p[i]) {
+            x ^= p[i];
+        }
+        else {
+            p[i] = x;
+
+            for(int j = i + 1; j < B; j++) {
+                if((p[j] >> i) & 1)
+                    p[j] ^= x;
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 ```
 
