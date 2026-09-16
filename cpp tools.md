@@ -10,7 +10,7 @@ using boost::multiprecision::cpp_int;
 
 ### 对拍
 
-** Linux **
+#### Linux
 ```
 #include <bits/stdc++.h>
 using namespace std;
@@ -32,7 +32,7 @@ signed main()
 }
 ```
 
-** windows **
+#### windows
 ```
 #include <bits/stdc++.h>
 using namespace std;
