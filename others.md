@@ -944,16 +944,12 @@ u64 maxPrimeFactor(u64 n) {
 ### 最大流
 
 ```cpp
-#include <queue>
-#include <algorithm>
-
-#define int long long
 #define For(i, u) for (int i = fir[u]; ~i; i = e[i].nxt)
 #define rep(i, a, b) for (int i = (a); i <= (b); i++)
-constexpr int inf = 1e18;
+constexpr int inf = 1e9;
 
-const int N = 1e5 + 10; // 点数上限
-const int M = 5e5 + 10; // 双向边数上限的 2 倍
+const int N = 1e5 + 10;
+const int M = 1e6 + 10;
 
 struct Edge {
     int v, c, nxt;
@@ -961,7 +957,7 @@ struct Edge {
 
 int fir[N], cur[N], d[N];
 int cnt = 0;
-int n;
+int n, a[N], b[N];
 
 inline void addedge(int u, int v, int c) {
     e[cnt] = {v, c, fir[u]};
@@ -971,7 +967,7 @@ inline void addedge(int u, int v, int c) {
     fir[v] = cnt++;
 }
 
-inline bool bfs(int S, int T) {
+inline bool bfs(int S, int T, int n) {
     rep(i, 0, n) { 
         cur[i] = fir[i];
         d[i] = inf;
@@ -1011,9 +1007,9 @@ inline int dfs(int u, int flow, int T) {
     return sum;
 }
 
-inline int dinic(int S, int T) {
+inline int dinic(int S, int T, int n) {
     int maxflow = 0;
-    while (bfs(S, T)) {
+    while (bfs(S, T, n)) {
         maxflow += dfs(S, inf, T);
     }
     return maxflow;
