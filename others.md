@@ -298,47 +298,28 @@ struct PrefixBasis {
 
 ### 异或高斯消元
 **1. 增广矩阵:**
-```
-//增广矩阵版本
-const int MAXN = 1005;
+```constexpr int N = 1010;
+bitset<N> a[N];
+long long b[N];
 
-bitset<MAXN> a[MAXN];  // 仅存储未知数的系数 (0 或 1)
-long long val[MAXN];   // 存储对应的整数常数项
-
-// 返回值：0 唯一解，1 存在自由元，-1 无解
-int gauss_xor(int n, int m, vector<long long>& ans) {
+// 0: 唯一解, 1: 多解, -1: 无解
+int gauss(int n, int m, vector<long long>& ans) {
     int r = 0;
-    for (int c = 0; c < m; ++c) {
-        int pivot = r;
-        while (pivot < n && !a[pivot][c]) pivot++;
-        if (pivot == n) continue;
-        
-        if (pivot != r) {
-            swap(a[r], a[pivot]);
-            swap(val[r], val[pivot]); // 【重点】交换行时，常数项也要跟着交换
-        }
-        
-        for (int i = 0; i < n; ++i) {
-            if (i != r && a[i][c]) {
-                a[i] ^= a[r];
-                val[i] ^= val[r]; // 【重点】系数异或时，常数项也跟着异或
-            }
-        }
+    for(int c = 0; c < m; c++) {
+        int p = r;
+        while(p < n && !a[p][c]) p++;
+        if(p == n) continue;
+        swap(a[p], a[r]);
+        swap(b[p], b[r]);
+        for(int i = 0; i < n; i++)
+            if(i != r && a[i][c])
+                a[i] ^= a[r], b[i] ^= b[r];
         r++;
     }
-    
-    ans.assign(m, 0);
-    // 检查是否有 0 = val 的矛盾方程
-    for (int i = r; i < n; ++i) {
-        if (val[i] != 0) return -1; // 左边系数全为0，但右边常数项不为0，无解
-    }
-    
-    if (r < m) return 1; // 多解
-    
-    // 提取唯一解
-    for (int i = 0; i < m; ++i) {
-        ans[i] = val[i]; // 第 i 个未知数的解就是对应的常数项
-    }
+    for(int i = r; i < n; i++)
+        if(b[i]) return -1;
+    if(r < m) return 1;
+    ans.assign(b, b + m);
     return 0;
 }
 ```
@@ -349,36 +330,36 @@ void gaussxor() {
 	int r = 1;
 	
 	for(int j = 1; j <= m && r <= n; j++) {
-	    int p = 0;
+		int p = 0;
 	
-	    for(int i = r; i <= n; i++) {
-	        if(a[i][j]) {
-	            p = i;
-	            break;
-	        }
-	    }
+		for(int i = r; i <= n; i++) {
+			if(a[i][j]) {
+				p = i;
+				break;
+			}
+		}
 	
-	    if(!p) continue;
+		if(!p) continue;
 	
-	    swap(a[r], a[p]);
-	    swap(from[r], from[p]);
-
+		swap(a[r], a[p]);
+		swap(from[r], from[p]);
+	
 		//行阶梯型
-	    for(int i = r + 1; i <= n; i++) {
-	        if(a[i][j]) {
-	            a[i] ^= a[r];
-	            from[i] ^= from[r];
-	        }
-	    }
+		for(int i = r + 1; i <= n; i++) {
+			if(a[i][j]) {
+				a[i] ^= a[r];
+				from[i] ^= from[r];
+			}
+		}
 		/*行最简型
 		for(int i = 1; i <= n; i++) {
-		    if(i != r && a[i][j]) {
-		        a[i] ^= a[r];
-		        from[i] ^= from[r];
-		    }
+			if(i != r && a[i][j]) {
+				a[i] ^= a[r];
+				from[i] ^= from[r];
+			}
 		}
 		*/
-	    r++;
+		r++;
 	}
 }
 ```
