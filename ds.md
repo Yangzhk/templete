@@ -1,6 +1,7 @@
 # 数据结构
 
 ## 目录
+- [st 表](#st-表)
 - [01 trie](#01-trie)
 - [Segment Tree Beats（吉司机）](#segment-tree-beats吉司机)
 - [李超线段树](#李超线段树)
@@ -14,6 +15,38 @@
 - [Link-Cut Tree](#link-cut-tree)
 
 ---
+
+## st 表
+
+```
+struct ST {
+    static const int LOG = 20;
+    int n;
+    int st[LOG][N];
+    int lg[N];
+
+    void init(int *a, int n_) {
+        n = n_;
+
+        lg[1] = 0;
+        for(int i = 2; i <= n; i++)
+            lg[i] = lg[i >> 1] + 1;
+
+        for(int i = 1; i <= n; i++)
+            st[0][i] = a[i];
+
+        for(int j = 1; (1 << j) <= n; j++)
+            for(int i = 1; i + (1 << j) - 1 <= n; i++)
+                st[j][i] = max(st[j - 1][i],
+                               st[j - 1][i + (1 << (j - 1))]);
+    }
+
+    int query(int l, int r) {
+        int k = lg[r - l + 1];
+        return max(st[k][l], st[k][r - (1 << k) + 1]);
+    }
+};
+```
 
 ## 01 trie
 
