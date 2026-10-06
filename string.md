@@ -279,40 +279,35 @@ vector<int> manacher(const string &s) {
 ## 7. 后缀数组 - O(n log n)
 
 ```
-const int MAXN = 1000005; // 根据题目需求调整最大长度
+const int N = 1000005; 
 
-int sa[MAXN];      // sa[i]: 排名为 i 的后缀起始位置
-int rk[MAXN];      // rk[i]: 起始位置为 i 的后缀的排名
-int oldrk[MAXN<<1]; // 辅助数组，空间需两倍防止越界
-int tmp[MAXN];     // 第二关键字排序辅助
-int cnt[MAXN];     // 基数排序计数数组
-int height[MAXN];  // height[i]: sa[i] 和 sa[i-1] 的最长公共前缀 (LCP)
+int sa[N];
+int rk[N];
+int oldrk[N << 1]; 
+int tmp[N];
+int cnt[N];
+int height[N];
 
 void build_sa(const string& s) {
     int n = s.length();
-    int m = 127; // 字符集大小（初始为 ASCII 范围）
+    int m = 127; 
 
-    // 初始基数排序（针对单个字符）
     for (int i = 1; i <= n; i++) cnt[rk[i] = s[i - 1]]++;
     for (int i = 1; i <= m; i++) cnt[i] += cnt[i - 1];
     for (int i = n; i >= 1; i--) sa[cnt[rk[i]]--] = i;
 
-    // w 为当前已排序的长度，下次比较 2w 长度
     for (int w = 1, p = 0; w < n; w <<= 1, m = p) {
-        // 1. 对第二关键字排序
         p = 0;
-        for (int i = n - w + 1; i <= n; i++) tmp[++p] = i; // 后面没有 w 长度的后缀排名最小
+        for (int i = n - w + 1; i <= n; i++) tmp[++p] = i; 
         for (int i = 1; i <= n; i++) {
             if (sa[i] > w) tmp[++p] = sa[i] - w;
         }
 
-        // 2. 对第一关键字基数排序
         for (int i = 1; i <= m; i++) cnt[i] = 0;
         for (int i = 1; i <= n; i++) cnt[rk[i]]++;
         for (int i = 1; i <= m; i++) cnt[i] += cnt[i - 1];
         for (int i = n; i >= 1; i--) sa[cnt[rk[tmp[i]]]--] = tmp[i];
 
-        // 3. 更新 rk 数组，根据双关键字判断是否重复
         for (int i = 1; i <= n; i++) oldrk[i] = rk[i];
         p = 0;
         for (int i = 1; i <= n; i++) {
@@ -321,14 +316,13 @@ void build_sa(const string& s) {
             else
                 rk[sa[i]] = ++p;
         }
-        if (p == n) break; // 已全部排序完成
+        if (p == n) break; 
     }
 }
 
 void build_height(const string& s) {
     int n = s.length();
     int k = 0;
-    // LCP 性质: height[rk[i]] >= height[rk[i-1]] - 1
     for (int i = 1; i <= n; i++) {
         if (rk[i] == 1) continue;
         if (k) k--;
