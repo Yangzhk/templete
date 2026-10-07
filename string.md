@@ -290,7 +290,12 @@ int height[N];
 
 void build_sa(const string& s) {
     int n = s.length();
-    int m = 127; 
+    int m = n;
+
+    fill(cnt, cnt + m + 5, 0);
+    fill(oldrk, oldrk + 2 * n + 5, 0);
+    fill(height, height + n + 5, 0);
+ 
 
     for (int i = 1; i <= n; i++) cnt[rk[i] = s[i - 1]]++;
     for (int i = 1; i <= m; i++) cnt[i] += cnt[i - 1];
