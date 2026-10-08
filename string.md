@@ -1,4 +1,4 @@
-# 字符串算法模板
+<img width="2440" height="1244" alt="image" src="https://github.com/user-attachments/assets/dc37b5eb-5513-45c9-9bb2-1272afd2e0ee" /># 字符串算法模板
 
 ## 目录
 
@@ -11,6 +11,7 @@
   - [5. AC 自动机](#5-ac-自动机)
   - [6. Manacher 算法 — 回文](#6-manacher-算法--回文)
   - [7. 后缀数组 - O(n log n)](#7-后缀数组---on-log-n)
+  - [压缩后缀树](#压缩后缀树)
   - [8. 后缀自动机 (SAM) — O(nA)](#8-后缀自动机-sam--ona)
   - [9. 最长公共子序列 (LCS) — DP](#9-最长公共子序列-lcs--dp)
   - [10. 最小循环表示 (Booth 算法)](#10-最小循环表示-booth-算法)
@@ -345,6 +346,233 @@ void build_height(const string& s) {
 - 最长重复子串：LCP 数组最大值
 
 ---
+
+## 压缩后缀树
+
+### 1. 基本概念
+
+将字符串 `s` 的所有后缀插入 Trie，得到后缀 Trie，节点数最坏为 $O(n^2)$。
+
+**压缩后缀树**：把没有分叉的连续路径压缩成一条边；边用原字符串中的区间表示，不实际复制字符。节点数、边数均为 $O(n)$。
+
+构建时在字符串末尾加入唯一终止符 `$`（不出现在原串中），保证每个后缀有独立叶子。
+
+- 内部节点：至少两个后缀的公共前缀，非根内部节点至少有两个儿子。
+- 叶子：一个完整后缀。
+- **隐式节点**：压缩边中间的某个位置，也代表一个不同子串。
+
+记：
+
+- `dep[u]`：从根到 `u` 的字符串长度。
+- `len(u,v)`：边 `u -> v` 的长度。
+
+$$
+len(u,v)=dep[v]-dep[u].
+$$
+
+> 注意：一个不同子串可能落在某条边的中间，不能只统计显式节点。
+
+### 2. SA + Height 建树
+
+采用 **SA + Height（LCP）+ 栈**，已知 SA、Height 后可在线性时间建树。
+
+- `sa[i]`：字典序第 `i` 小的后缀起点（1-index）。
+- `height[i]`：`sa[i-1]` 与 `sa[i]` 的 LCP 长度，`height[1]=0`。
+
+按 SA 顺序插入叶子，维护最右侧路径上的内部节点栈。处理第 `i` 个后缀，令 `h=height[i]`：
+
+1. 弹出深度大于 `h` 的内部节点。
+2. 若栈顶深度小于 `h`，就在栈顶最后一个儿子的边上插入深度为 `h` 的新内部节点，将原儿子移到新节点下面。
+3. 新建深度为当前后缀长度的叶子，挂到栈顶内部节点下。
+
+**示例**：`s = "abab$"`
+
+| i | sa[i] | 后缀 | height[i] |
+|---|---:|---|---:|
+| 1 | 5 | `$` | 0 |
+| 2 | 3 | `ab$` | 0 |
+| 3 | 1 | `abab$` | 2 |
+| 4 | 4 | `b$` | 0 |
+| 5 | 2 | `bab$` | 1 |
+
+其中 `height[3]=2` 意味着两个相邻后缀有公共前缀 `ab`，需要创建深度为 2 的分叉节点。
+
+#### C++ 模板
+
+以下 `n` **包含 `$`**，`sa[1..n]`、`height[1..n]` 已经求好。
+
+```cpp
+struct SuffixTree {
+    struct Node {
+        int dep = 0, pos = -1, cnt = 0;
+        vector<int> son;
+    };
+
+    vector<Node> tr;
+    int rt = 0;
+
+    int newnode(int dep, int pos = -1) {
+        int id = tr.size();
+        tr.push_back({});
+        tr[id].dep = dep;
+        tr[id].pos = pos;
+        return id;
+    }
+
+    void build(int n, int sa[], int height[]) {
+        tr.clear();
+        rt = newnode(0);
+        vector<int> st = {rt};
+
+        for (int i = 1; i <= n; i++) {
+            int h = height[i];
+            while (tr[st.back()].dep > h) st.pop_back();
+
+            if (tr[st.back()].dep < h) {
+                int p = st.back();
+                int v = newnode(h);
+                int u = tr[p].son.back();
+                tr[p].son.back() = v;
+                tr[v].son.push_back(u);
+                st.push_back(v);
+            }
+
+            int u = newnode(n - sa[i] + 1, sa[i]);
+            tr[st.back()].son.push_back(u);
+        }
+    }
+
+    void dfs(int u) {
+        if (tr[u].son.empty()) {
+            tr[u].cnt = 1;
+            return;
+        }
+        tr[u].cnt = 0;
+        for (int v : tr[u].son) {
+            dfs(v);
+            tr[u].cnt += tr[v].cnt;
+            if (tr[u].pos == -1) tr[u].pos = tr[v].pos;
+        }
+    }
+};
+```
+
+- `pos[u]`：`u` 子树某个后缀的起点，可用于定位边字符串。
+- `cnt[u]`：子树叶子数，也就是该节点字符串的出现次数（以非终止符结尾的子串为准）。
+- 构建树：$O(n)$ 时间、$O(n)$ 空间（不含 SA 的预处理）。
+
+> 注：上述 `dfs` 使用递归，极端长链可能爆栈；大数据可改迭代后序遍历。
+
+### 3. 子串信息怎么维护？
+
+#### 3.1 出现次数
+
+对于边 `u -> v`，在这条边中间任意位置结束的子串，都有相同的出现次数：
+
+$$
+\boxed{cnt[v]}.
+$$
+
+原因：它们对应的后缀集合完全相同，恰好是 `v` 子树的所有叶子。
+
+#### 3.2 去掉终止符
+
+若只统计原串的非空子串，记有效深度：
+
+$$
+D[u]=\begin{cases}
+dep[u]-1,&u\text{ 是叶子},\\
+dep[u],&u\text{ 是内部节点}.
+\end{cases}
+$$
+
+对于边 `u -> v`，有效长度为：
+
+$$
+\boxed{k=D[v]-D[u]}.
+$$
+
+此处原串后缀树的非根内部节点深度均不含终止符；`$` 叶子的有效深度是 0，贡献自然为 0。
+
+#### 3.3 不同子串数量
+
+一条边代表 `k` 个不同子串（对应这条边的 `k` 个结束位置），所以：
+
+$$
+\boxed{\text{distinct}=\sum_{u\to v}(D[v]-D[u])}.
+$$
+
+#### 3.4 出现至少 / 恰好 t 次的不同子串数
+
+$$
+\boxed{\text{atLeast}(t)=\sum_{u\to v,\ cnt[v]\ge t}(D[v]-D[u])}.
+$$
+
+$$
+\boxed{\text{exact}(t)=\sum_{u\to v,\ cnt[v]=t}(D[v]-D[u])}.
+$$
+
+#### 3.5 所有不同子串的长度之和
+
+边 `u -> v` 对应的子串长度为 `D[u]+1, ..., D[v]`，贡献为等差数列：
+
+$$
+\boxed{\text{sumLen}=\sum_{u\to v}\frac{(D[u]+1+D[v])(D[v]-D[u])}{2}}.
+$$
+
+#### 3.6 定位边对应的字符串
+
+若 `pos[v]` 是 `v` 子树某个后缀的起点，则边 `u -> v` 对应原串区间（1-index）：
+
+$$
+\boxed{[pos[v]+dep[u],\ pos[v]+dep[v]-1]}.
+$$
+
+因此只需存 `pos` 和 `dep`，不需要复制字符串。叶子末端可能包含 `$`，如要输出原串子串，请用有效深度裁掉末尾终止符。
+
+### 4. 后缀 Trie 的祖先互斥选点 DP 如何优化？
+
+问题：选一些**非空且不同的子串**，要求任意两个选中的子串不存在真前缀关系。它们在后缀 Trie 上对应一个反链（任意两个节点互不为祖先）。
+
+记：`dp[u]` 为 `u` 子树中的合法选择方案数，包含空集；先假设 `u` 对应一个可以选的原串子串。
+
+原始 Trie 的转移：
+
+$$
+\boxed{dp[u]=1+\prod_{v\in son(u)}dp[v]}.
+$$
+
+- 选 `u`：只有 1 种，其子树后代都不能选。
+- 不选 `u`：各个儿子子树独立，方案数相乘。
+
+压缩后，边 `u -> v` 的有效长度为 `k=D[v]-D[u]`。
+
+- **若 `v` 是内部节点**：从 `u` 到 `v` 的边上有 `k-1` 个被压缩的中间节点；选其中任意一个只有一种对应方案，不选这些中间节点则有 `dp[v]` 种，因此贡献为 `dp[v]+k-1`。
+- **若 `v` 是叶子**：边上共有 `k` 个有效位置，可以任选其中一个，或者都不选，贡献为 `k+1`。当 `k=0` 时贡献自然为 1。
+
+统一记每个儿子分支的贡献：
+
+$$
+\boxed{g(u,v)=\begin{cases}
+k+1,&v\text{ 为叶子},\\
+dp[v]+k-1,&v\text{ 为内部节点}.
+\end{cases}}
+$$
+
+非根内部节点代表非空子串，其转移是：
+
+$$
+\boxed{dp[u]=1+\prod_{v\in son(u)}g(u,v)}.
+$$
+
+根代表空串，**不能选**，因此最终答案是：
+
+$$
+\boxed{ans=\prod_{v\in son(root)}g(root,v)}.
+$$
+
+这里 `ans` 包含什么都不选的空集方案；若不允许空集，最后减 1。需要取模时，按题目模数计算。
+
 
 ## 8. 后缀自动机 (SAM) — O(nA)
 
