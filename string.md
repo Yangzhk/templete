@@ -1,5 +1,3 @@
-<img width="2440" height="1244" alt="image" src="https://github.com/user-attachments/assets/dc37b5eb-5513-45c9-9bb2-1272afd2e0ee" /># 字符串算法模板
-
 ## 目录
 
 - [字符串算法模板](#字符串算法模板)
