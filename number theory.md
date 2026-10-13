@@ -9,11 +9,11 @@
 ### 类欧几里得
 ```
 //(ai + b) / c, 0 <= i <= n
-using ll = long long;
+#define int long long
 
-ll floor_sum(ll n, ll a, ll b, ll c) {
+int floor_sum(int n, int a, int b, int c) {
     n++;
-    ll ans = 0;
+    int ans = 0;
     while (true) {
         if (a >= c) {
             ans += n * (n - 1) / 2 * (a / c);
@@ -23,7 +23,7 @@ ll floor_sum(ll n, ll a, ll b, ll c) {
             ans += n * (b / c);
             b %= c;
         }
-        ll y = a * n + b;
+        int y = a * n + b;
         if (y < c) break;
         n = y / c;
         b = y % c;
@@ -36,21 +36,21 @@ ll floor_sum(ll n, ll a, ll b, ll c) {
 ```
 //f : 1, g : i, h : ()^2
 
-using ll = long long;
+#define int long long
 
 struct Node {
-    ll f, g, h;
+    int f, g, h;
 };
 
-Node euclid(ll n, ll a, ll b, ll c) {
-    ll qa = a / c, qb = b / c;
+Node euclid(int n, int a, int b, int c) {
+    int qa = a / c, qb = b / c;
     a %= c, b %= c;
 
-    ll s1 = n * (n + 1) / 2;
-    ll s2 = n * (n + 1) * (2 * n + 1) / 6;
+    int s1 = n * (n + 1) / 2;
+    int s2 = n * (n + 1) * (2 * n + 1) / 6;
 
-    ll f = 0, g = 0, h = 0;
-    ll m = (a * n + b) / c;
+    int f = 0, g = 0, h = 0;
+    int m = (a * n + b) / c;
 
     if (m) {
         auto [F, G, H] = euclid(m - 1, c, c - b - 1, a);
@@ -73,13 +73,13 @@ Node euclid(ll n, ll a, ll b, ll c) {
 ```
 //带模数
 
-using ll = long long;
-const ll mod = 998244353;
-const ll inv2 = 499122177, inv6 = 166374059;
+#define int long long
+const int mod = 998244353;
+const int inv2 = 499122177, inv6 = 166374059;
 
 struct Z {
-    ll x;
-    Z(ll v = 0) : x((v % mod + mod) % mod) {}
+    int x;
+    Z(int v = 0) : x((v % mod + mod) % mod) {}
     Z operator + (Z b) const { return x + b.x; }
     Z operator - (Z b) const { return x - b.x; }
     Z operator * (Z b) const { return x * b.x; }
@@ -89,7 +89,7 @@ struct Node {
     Z f, g, h;
 };
 
-Node euclid(ll n, ll a, ll b, ll c) {
+Node euclid(int n, int a, int b, int c) {
     Z A = a / c, B = b / c;
     a %= c, b %= c;
 
@@ -98,7 +98,7 @@ Node euclid(ll n, ll a, ll b, ll c) {
     Z s2 = N * (N + 1) * (N * 2 + 1) * inv6;
 
     Z f = 0, g = 0, h = 0;
-    ll m = ((__int128)a * n + b) / c;
+    int m = ((__int128)a * n + b) / c;
 
     if (m) {
         auto [F, G, H] = euclid(m - 1, c, c - b - 1, a);
