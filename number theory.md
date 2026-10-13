@@ -70,6 +70,54 @@ Node euclid(ll n, ll a, ll b, ll c) {
 
 ```
 
+```
+//带模数
+
+using ll = long long;
+const ll mod = 998244353;
+const ll inv2 = 499122177, inv6 = 166374059;
+
+struct Z {
+    ll x;
+    Z(ll v = 0) : x((v % mod + mod) % mod) {}
+    Z operator + (Z b) const { return x + b.x; }
+    Z operator - (Z b) const { return x - b.x; }
+    Z operator * (Z b) const { return x * b.x; }
+};
+
+struct Node {
+    Z f, g, h;
+};
+
+Node euclid(ll n, ll a, ll b, ll c) {
+    Z A = a / c, B = b / c;
+    a %= c, b %= c;
+
+    Z N = n;
+    Z s1 = N * (N + 1) * inv2;
+    Z s2 = N * (N + 1) * (N * 2 + 1) * inv6;
+
+    Z f = 0, g = 0, h = 0;
+    ll m = ((__int128)a * n + b) / c;
+
+    if (m) {
+        auto [F, G, H] = euclid(m - 1, c, c - b - 1, a);
+        f = N * m - F;
+        g = s1 * m - (H + F) * inv2;
+        h = N * m * m - G * 2 - F;
+    }
+
+    return {
+        f + A * s1 + B * (N + 1),
+        g + A * s2 + B * s1,
+        h + A * g * 2 + B * f * 2
+          + A * A * s2 + A * B * s1 * 2 + B * B * (N + 1)
+    };
+}
+
+
+```
+
 ### 莫比乌斯函数
 
 ```
