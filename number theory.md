@@ -1,3 +1,11 @@
+- [类欧几里得](#类欧几里得)
+- [莫比乌斯函数](#莫比乌斯函数)
+- [数论分块](#数论分块)
+- [中国剩余定理](#中国剩余定理)
+- [Lucas 定理](#lucas-定理)
+- [BSGS（离散对数）](#bsgs离散对数)
+- [二次剩余](#二次剩余)
+- [Miller-Rabin \& Pollard Rho](#miller-rabin--pollard-rho)
 ### 类欧几里得
 ```
 //(ai + b) / c, 0 <= i <= n
@@ -104,7 +112,7 @@ int getmu(int x) { // O(sqrt(n)) 求单个 mobius 函数
 }
 ```
 
-### 数论分块（整除分块）
+### 数论分块
 
 ```
 // sum_{i=1..n} floor(n/i), O(sqrt(n))
