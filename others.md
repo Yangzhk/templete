@@ -2,6 +2,7 @@
 ## 目录
 
 - [目录](#目录)
+  - [模运算重载](#模运算重载)
   - [模运算](#模运算)
   - [矩阵运算类](#矩阵运算类)
   - [普通高斯消元](#普通高斯消元)
@@ -21,6 +22,29 @@
   - [fail 链路径压缩](#fail-链路径压缩)
   - [ntt 拉差](#ntt-拉差)
 ---
+
+### 模运算重载
+```
+struct Z {
+    ll x;
+    Z(ll v = 0) : x((v % mod + mod) % mod) {}
+
+    Z operator + (Z b) const { return x + b.x; }
+    Z operator - (Z b) const { return x - b.x; }
+    Z operator * (Z b) const { return x * b.x; }
+
+    Z qpow(ll b) const {
+        Z a = *this, res = 1;
+        for(; b; b >>= 1, a = a * a)
+            if(b & 1) res = res * a;
+        return res;
+    }
+
+    Z operator / (Z b) const {
+        return *this * b.qpow(mod - 2);
+    }
+};
+```
 
 ### 模运算
 
