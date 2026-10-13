@@ -6,6 +6,7 @@
   - [模运算](#模运算)
   - [矩阵运算类](#矩阵运算类)
   - [普通高斯消元](#普通高斯消元)
+  - [行列式](#行列式)
   - [莫队](#莫队)
   - [xor 线性基](#xor-线性基)
   - [异或高斯消元](#异或高斯消元)
@@ -131,51 +132,85 @@ struct matrix{
 
 ### 普通高斯消元
 ```
-constexpr int N = 510;
-constexpr long double eps = 1e-12;
+#define int long long
+const int mod = 998244353;
 
-int n;
-long double a[N][N + 1], ans[N];
+int qpow(int a, int b) {
+    int res = 1;
+    for(; b; b >>= 1, a = a * a % mod)
+        if(b & 1) res = res * a % mod;
+    return res;
+}
 
-// 0: 无解
-// 1: 唯一解
-// 2: 无穷多解
-int gauss()
-{
-    int r = 1;
+int gauss(vector<vector<int>> a, vector<int> &x) {
+    int n = a.size(), m = a[0].size() - 1;
+    vector<int> pos(m, -1);
+    int rk = 0;
 
-    for(int c = 1; c <= n && r <= n; c++) {
-        int p = r;
-        for(int i = r; i <= n; i++)
-            if(fabsl(a[i][c]) > fabsl(a[p][c]))
-                p = i;
+    for(auto &v : a)
+        for(auto &t : v) t = (t % mod + mod) % mod;
 
-        if(fabsl(a[p][c]) < eps) continue;
+    for(int j = 0; j < m && rk < n; j++) {
+        int p = rk;
+        while(p < n && !a[p][j]) p++;
+        if(p == n) continue;
 
-        swap(a[p], a[r]);
+        swap(a[p], a[rk]);
+        pos[j] = rk;
 
-        for(int i = 1; i <= n; i++) {
-            if(i == r) continue;
-            if(fabsl(a[i][c]) < eps) continue;
+        int inv = qpow(a[rk][j], mod - 2);
+        for(int k = j; k <= m; k++)
+            a[rk][k] = a[rk][k] * inv % mod;
 
-            long double t = a[i][c] / a[r][c];
-            for(int j = c; j <= n + 1; j++)
-                a[i][j] -= t * a[r][j];
+        for(int i = 0; i < n; i++) {
+            if(i == rk || !a[i][j]) continue;
+            int t = a[i][j];
+            for(int k = j; k <= m; k++)
+                a[i][k] = (a[i][k] - t * a[rk][k] % mod + mod) % mod;
         }
-
-        r++;
+        rk++;
     }
 
-    for(int i = r; i <= n; i++)
-        if(fabsl(a[i][n + 1]) > eps)
-            return 0;
+    for(int i = rk; i < n; i++)
+        if(a[i][m]) return -1;
 
-    if(r <= n) return 2;
+    x.assign(m, 0);
+    for(int j = 0; j < m; j++)
+        if(pos[j] != -1) x[j] = a[pos[j]][m];
 
-    for(int i = 1; i <= n; i++)
-        ans[i] = a[i][n + 1] / a[i][i];
+    return m - rk;
+}
+```
 
-    return 1;
+### 行列式
+```
+int det(vector<vector<int>> a) {
+    int n = a.size();
+    int ans = 1;
+
+    for(auto &v : a)
+        for(auto &t : v) t = (t % mod + mod) % mod;
+
+    for(int j = 0; j < n; j++) {
+        int p = j;
+        while(p < n && !a[p][j]) p++;
+        if(p == n) return 0;
+
+        if(p != j) {
+            swap(a[p], a[j]);
+            ans = (mod - ans) % mod;
+        }
+
+        ans = ans * a[j][j] % mod;
+        int inv = qpow(a[j][j], mod - 2);
+
+        for(int i = j + 1; i < n; i++) {
+            int t = a[i][j] * inv % mod;
+            for(int k = j; k < n; k++)
+                a[i][k] = (a[i][k] - t * a[j][k] % mod + mod) % mod;
+        }
+    }
+    return ans;
 }
 ```
 
