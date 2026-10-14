@@ -52,7 +52,7 @@ struct Z {
 ```
 int fac[N], inv[N];
 
-int qpow(int a, int v = P - 2){
+int qpow(int a, int v = mod - 2){
     int res = 1;
     for(; v; a = a * a % mod, v >>= 1){
         if(v & 1) res = res * a % mod;
