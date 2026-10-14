@@ -1477,7 +1477,7 @@ void solve()
     }
 }
 ```
-### ntt 拉差
+### ntt
 ```
 #include <bits/stdc++.h>
 using namespace std;
