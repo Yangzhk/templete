@@ -1,4 +1,5 @@
 - [NTT 与基础框架](#ntt-与基础框架)
+- [Poly 类使用速查](#poly-类使用速查)
 - [三模数 NTT（精确卷积 / 任意模数）](#三模数-ntt精确卷积--任意模数)
 - [基础运算](#基础运算)
   - [加 / 减 / 乘](#加--减--乘)
@@ -9,6 +10,7 @@
 - [多项式快速幂](#多项式快速幂)
 - [多项式除法 / 取模](#多项式除法--取模)
 - [多项式平移 f(x+c)](#多项式平移-fxc)
+- [斯特林数（第一类 / 第二类）](#斯特林数第一类--第二类)
 - [多点求值](#多点求值)
 - [快速插值](#快速插值)
 - [常系数齐次线性递推 (Bostan–Mori)](#常系数齐次线性递推-bostanmori)
@@ -25,6 +27,8 @@
 
 模数 $998244353 = 119 \times 2^{23} + 1$，原根 $g = 3$，支持长度 $\le 2^{23}$ 的 NTT。
 
+**提醒：** 本文 `Poly` 的各段 C++ 代码是同一个 `struct Poly` 的连续部分，除了最后一个代码块外，都尚未闭合类定义。按章节顺序拼接使用。
+
 设计要点：
 
 - `pw` 接受任意素数模 `p`，默认 `mod`。
@@ -36,17 +40,19 @@
 using namespace std;
 
 struct Poly {
-    static const int mod = 998244353, G = 3, G_inv = 332748118;
+    static const int mod = 998244353, G = 3;
 
     vector<int> a;
 
     Poly() = default;
-    Poly(vector<int> v) : a(move(v)) {}
+    Poly(vector<int> v) : a(move(v)) {
+        for (int &x : a) x = (x % mod + mod) % mod;
+    }
 
     int size() const { return (int)a.size(); }
     void resize(int n) { a.resize(n, 0); }
     int& operator[](int i) { return a[i]; }
-    int operator[](int i) const { return i < size() ? a[i] : 0; }
+    int operator[](int i) const { return i >= 0 && i < size() ? a[i] : 0; }
 
     static int pw(int x, long long k, int p = mod) {
         int r = 1; x = (x % p + p) % p;
@@ -67,7 +73,8 @@ struct Poly {
         for (int i = 0; i < n; i++)
             if (i < rev[i]) swap(a[i], a[rev[i]]);
         for (int m = 1; m < n; m <<= 1) {
-            int wn = pw(inv ? G_inv : G, (p - 1) / (m << 1), p);
+            int wn = pw(G, (p - 1) / (m << 1), p);
+            if (inv) wn = inv_mod(wn, p);
             for (int i = 0; i < n; i += m << 1) {
                 int w = 1;
                 for (int j = 0; j < m; j++, w = 1ll * w * wn % p) {
@@ -87,6 +94,8 @@ struct Poly {
         if (A.empty() || B.empty()) return {};
         int len = (int)A.size() + (int)B.size() - 1, n = 1;
         while (n < len) n <<= 1;
+        for (int &x : A) x = (x % p + p) % p;
+        for (int &x : B) x = (x % p + p) % p;
         ntt(A, n, false, p); ntt(B, n, false, p);
         for (int i = 0; i < n; i++) A[i] = 1ll * A[i] * B[i] % p;
         ntt(A, n, true, p);
@@ -94,6 +103,35 @@ struct Poly {
         return A;
     }
 ```
+
+---
+
+## Poly 类使用速查
+
+这份模板采用**“分段展示、同一个类”**的写法：从 `struct Poly {` 开始，把各节中的类成员依次放进去，直到“拉格朗日插值”末尾的 `};`。**不要把每段独立编译**；FWT、子集卷积则是类外函数。主程序写在 `};` 后。
+
+`Poly` 表示 $a_0+a_1x+\cdots+a_{m-1}x^{m-1}$，`a[i]` 是 $x^i$ 的系数，**不是 $x=i$ 的函数值**。比如 `Poly f({1,2,3});` 是 $1+2x+3x^2$。系数应在 $[0,\mathrm{mod})$ 中，构造函数会对传入的正负整数自动取模；直接写 `f[i] = value` 时仍需自行取模。
+
+```cpp
+Poly f({1, 2, 3}), g({2, 1});  // f=1+2x+3x^2, g=2+x
+Poly h = f * g;                 // h={2,5,8,3}，乘法自动 NTT
+h.resize(3);                   // 截断到 x^3 以下（保留下标 0..2）
+Poly fi = f.inv(4);             // f*fi = 1 (mod x^4)，要求 f[0]!=0
+Poly t = f.deriv();             // 导数 2+6x
+Poly u = f.integ();             // 积分 0+x+x^2+x^3
+Poly p = f.shift(2);            // 得到 f(x+2)
+int y = f.eval(5);              // 计算 f(5)
+int s = Poly::stirling2(5)[3];  // S(5,3)=25
+```
+
+### 防 WA 检查表
+
+1. **精度参数 `n`**：`inv(n)`、`ln(n)`、`exp(n)`、`sqrt(n)`、`pow(n,k)` 返回**恰好 `n` 项**，即模 $x^n$，不是多项式次数为 $n$。`resize(n)` 也保留系数 `a[0..n-1]`；若要最高次为 $d$，通常传 `d+1`。
+2. **函数前置条件**：`inv(n)` 要求 $f(0)\ne0$；`ln(n)` 要求 $f(0)=1$；`exp(n)` 要求 $f(0)=0$；本模板的 `sqrt(n)` **仅支持** $f(0)=1$，其他常数项需另做二次剩余处理。`pow(n,k)` 的 $k$ 必须是非负整数。
+3. **下标与系数**：非 `const` 的 `f[i]`、`f.a[i]` 不会自动扩容，也不会自动取模；写入之前先 `resize()`，读不存在的系数可以对 `const Poly&` 使用 `operator[]` 返回零。不要用负数下标。
+4. **多项式除法**：`f/g`、`f%g` 是**通常的多项式长除法商和余数**，并非形式幂级数意义的 `f*g.inv(n)`；若需要 $f/g\pmod{x^n}$，使用 `(f*g.inv(n)).resize(n)`（拆成两行调用）。除数不能是零多项式。
+5. **模数和规模**：此类默认 `998244353`；普通 NTT 长度不超过 $2^{23}$；三模数卷积共同支持的长度至多 $2^{21}$。输入的任意模数卷积若用 CRT，非负整数的原始卷积系数还需要小于三个 NTT 模数之积以保证唯一恢复。**不要在模板前加 `#define int long long`**，内部预期 `int` 为 32 位、`long long` 为 64 位。
+6. **避免裸临时对象调用 `.resize()`**：它返回 `void`。写 `Poly h=f*g; h.resize(n);`，不要写 `Poly h=(f*g).resize(n);`。
 
 ---
 
@@ -105,7 +143,7 @@ $$P_1 = 998244353 = 119 \times 2^{23} + 1$$
 $$P_2 = 1004535809 = 479 \times 2^{21} + 1$$
 $$P_3 = 469762049 = 7 \times 2^{26} + 1$$
 
-$P_1 P_2 P_3 \approx 4.7 \times 10^{26}$。`mul_exact` 假设结果 $< 2^{63}$ 直接返回 `long long`；任意模数下走 `mul_any`，CRT 合并时直接对目标模数取模，避免中间溢出。
+$P_1 P_2 P_3 \approx 4.7 \times 10^{26}$。`mul_exact` 假设输入非负、**真实卷积系数** $< 2^{63}$，返回 `long long`；`mul_any` 则需确保用于 CRT 恢复的真实非负卷积系数 $<P_1P_2P_3$，否则对任意模数取模不一定正确。三模数公共 NTT 长度最大 $2^{21}$。
 
 ```cpp
     // === 三模数 NTT ===
@@ -122,8 +160,8 @@ $P_1 P_2 P_3 \approx 4.7 \times 10^{26}$。`mul_exact` 假设结果 $< 2^{63}$ �
         return (int)((x % p + (M12 % p) * t2 % p) % p);
     }
 
-    // CRT 合并三个模数 → 精确整数（结果 < 2^63）
-    static long long crt(ll r1, ll r2, ll r3) {
+    // CRT 合并三个模数 → 精确非负整数（要求真实卷积系数 < 2^63）
+    static long long crt(long long r1, long long r2, long long r3) {
         static const int i12 = inv_mod(P1 % P2, P2);
         static const long long M12 = 1ll * P1 * P2;
         static const int i123 = inv_mod((int)(M12 % P3), P3);
@@ -210,6 +248,7 @@ $$
 ```cpp
     Poly inv(int n) const {
         if (n <= 0) return Poly();
+        assert(size() > 0 && a[0] != 0);
         Poly r({inv_mod(a[0])});
         for (int len = 2; len < (n << 1); len <<= 1) {
             int N = len << 1;
@@ -243,6 +282,8 @@ $$
 
 ```cpp
     Poly ln(int n) const {
+        if (n <= 0) return Poly();
+        assert(size() > 0 && a[0] == 1);
         Poly r = (deriv() * inv(n)).integ();
         r.resize(n);
         return r;
@@ -250,6 +291,7 @@ $$
 
     Poly exp(int n) const {
         if (n <= 0) return Poly();
+        assert(size() == 0 || a[0] == 0);
         Poly r({1});
         for (int len = 2; len < (n << 1); len <<= 1) {
             Poly L = r.ln(len);
@@ -274,6 +316,7 @@ $$
 ```cpp
     Poly sqrt(int n) const {
         if (n <= 0) return Poly();
+        assert(size() > 0 && a[0] == 1);
         const int i2 = (mod + 1) / 2;
         Poly r({1});
         for (int len = 2; len < (n << 1); len <<= 1) {
@@ -282,7 +325,7 @@ $$
             Poly t = Poly(move(f)) * r.inv(len);
             t.resize(len);
             for (int i = 0; i < len; i++)
-                t.a[i] = 1ll * (t[i] + r[i]) % mod * i2 % mod;
+                t.a[i] = 1ll * (t[i] + (i < r.size() ? r.a[i] : 0)) % mod * i2 % mod;
             r = move(t);
         }
         r.resize(n);
@@ -314,6 +357,7 @@ $$
 
     // k 较小时
     Poly pow(int n, long long k) const {
+        assert(k >= 0);
         if (n <= 0) return Poly();
         if (k == 0) { Poly r; r.a.assign(n, 0); r[0] = 1; return r; }
         int s = 0;
@@ -344,8 +388,21 @@ $$
         }
         int sh = 0;
         while (sh < size() && a[sh] == 0) sh++;
-        if (sh == size() || sh > 0) { Poly r; r.a.assign(n, 0); return r; }
-        return pow_core(n, km, kp);
+        if (sh == size()) return Poly(vector<int>(n, 0));
+        if (sh == 0) return pow_core(n, km, kp);
+        long long limit = (n - 1) / sh;
+        long long k = 0;
+        for (char c : s) {
+            if (k > limit / 10 || (k == limit / 10 && c - '0' > limit % 10))
+                return Poly(vector<int>(n, 0));
+            k = k * 10 + c - '0';
+        }
+        int sk = (int)(sh * k);
+        Poly q(vector<int>(a.begin() + sh, a.end()));
+        Poly t = q.pow_core(n - sk, km, kp);
+        Poly r(vector<int>(n, 0));
+        for (int i = 0; i < t.size() && i + sk < n; i++) r[i + sk] = t[i];
+        return r;
     }
 ```
 
@@ -364,9 +421,13 @@ $$F^R(x) \equiv Q^R(x) \cdot G^R(x) \pmod{x^{n-m+1}}$$
 ```cpp
     pair<Poly, Poly> divmod(const Poly &g) const {
         int n = size(), m = g.size();
+        while (n > 0 && a[n - 1] == 0) --n;
+        while (m > 0 && g.a[m - 1] == 0) --m;
+        assert(m > 0); // 除数不能为零多项式
         if (n < m) return {Poly(), *this};
         int qd = n - m + 1;
-        vector<int> fr(a.rbegin(), a.rend()), gr(g.a.rbegin(), g.a.rend());
+        vector<int> fr(a.begin(), a.begin() + n), gr(g.a.begin(), g.a.begin() + m);
+        reverse(fr.begin(), fr.end()); reverse(gr.begin(), gr.end());
         fr.resize(qd); gr.resize(qd);
         Poly q = Poly(move(fr)) * Poly(move(gr)).inv(qd);
         q.resize(qd);
@@ -394,6 +455,7 @@ $$
     Poly shift(int c) const {
         int n = size();
         if (!n) return Poly();
+        assert(n < mod);
         c = (c % mod + mod) % mod;
         vector<int> fac(n), ifac(n), A(n), C(n), r(n);
         fac[0] = 1;
@@ -411,6 +473,72 @@ $$
 
 ---
 
+## 斯特林数（第一类 / 第二类）
+
+固定 $n$，一次返回 $k=0,1,\ldots,n$ 的**整行**斯特林数（模 `998244353`），不需要 $O(n^2)$ DP。
+
+- **第一类（无符号）** $\begin{bmatrix}n\\k\end{bmatrix}$：$n$ 个元素组成 $k$ 个置换环的方案数。利用 $P_n(x)=x(x+1)\cdots(x+n-1)$ 的系数；倍增关系 $P_{2m}(x)=P_m(x)P_m(x+m)$，配合 `shift` 和 NTT，$O(n\log^2 n)$。
+- **第一类（有符号）** $s(n,k)=(-1)^{n-k}\begin{bmatrix}n\\k\end{bmatrix}$。
+- **第二类** $\begin{Bmatrix}n\\k\end{Bmatrix}$：把 $n$ 个**有标号**元素划分为 $k$ 个**非空、无标号**集合的方案数。由 $\displaystyle S(n,k)=\sum_{i=0}^k\frac{(-1)^{k-i}}{(k-i)!}\frac{i^n}{i!}$，转成一次卷积，$O(n\log n)$。
+
+下列函数**放在 `struct Poly` 内**，接在 `shift` 后面即可：
+
+```cpp
+    // 第一类斯特林数（无符号），返回 [n][0..n]
+    static vector<int> stirling1_unsigned(int n) {
+        assert(n >= 0 && n < mod);
+        if (n == 0) return {1};
+        if (n == 1) return {0, 1};
+        int m = n / 2;
+        Poly p(stirling1_unsigned(m));
+        Poly q = p * p.shift(m);
+        if (n & 1) q = q * Poly({n - 1, 1});
+        q.resize(n + 1);
+        return q.a;
+    }
+
+    // 第一类斯特林数（有符号）s(n,k)=(-1)^(n-k)*[n,k]
+    static vector<int> stirling1_signed(int n) {
+        auto a = stirling1_unsigned(n);
+        for (int k = 0; k <= n; k++)
+            if ((n - k) & 1) a[k] = (mod - a[k]) % mod;
+        return a;
+    }
+
+    // 第二类斯特林数 S(n,k)，返回 S(n,0..n)
+    static vector<int> stirling2(int n) {
+        assert(n >= 0 && n < mod);
+        vector<int> fac(n + 1), ifac(n + 1);
+        fac[0] = 1;
+        for (int i = 1; i <= n; i++) fac[i] = 1ll * fac[i - 1] * i % mod;
+        ifac[n] = inv_mod(fac[n]);
+        for (int i = n; i >= 1; i--) ifac[i - 1] = 1ll * ifac[i] * i % mod;
+        vector<int> A(n + 1), B(n + 1);
+        for (int i = 0; i <= n; i++) {
+            A[i] = (i & 1) ? mod - ifac[i] : ifac[i];
+            B[i] = 1ll * pw(i, n) * ifac[i] % mod; // 0^0 记为 1
+        }
+        Poly C = Poly(move(A)) * Poly(move(B));
+        C.resize(n + 1);
+        return C.a;
+    }
+```
+
+调用示例：
+
+```cpp
+int n = 5;
+auto c1 = Poly::stirling1_unsigned(n); // {0, 24, 50, 35, 10, 1}
+auto s1 = Poly::stirling1_signed(n);   // {0, 24, mod-50, 35, mod-10, 1}
+auto s2 = Poly::stirling2(n);          // {0, 1, 15, 25, 10, 1}
+int k = 3;
+cout << s2[k] << "\n"; // 25
+```
+
+**注意：** `stirling1_unsigned` 需要 `shift()` 正常工作；第一类返回的数组不是“固定 $k$ 的一列”，而是固定 $n$ 的整行。第二类用阶乘逆元，因此需 $n<\mathrm{mod}$，且卷积使用的 NTT 长度不能超过 $2^{23}$。第一类同样受 NTT 长度限制。
+
+---
+
 ## 多点求值
 
 给定 $n$ 个 $x_i$，对度 $< n$ 的 $f$ 求 $f(x_i)$。在线段树上维护 $T_u(x) = \prod_{i \in u}(x - x_i)$，递归时令 $f \leftarrow f \bmod T_u$，叶子处即 $f(x_i)$。复杂度 $O(n \log^2 n)$。
@@ -418,7 +546,10 @@ $$
 ```cpp
     static void mpe_build(vector<Poly>& tr, int u, int l, int r,
                           const vector<int>& xs) {
-        if (l == r) { tr[u] = Poly({(mod - xs[l]) % mod, 1}); return; }
+        if (l == r) {
+            int x = (xs[l] % mod + mod) % mod;
+            tr[u] = Poly({(mod - x) % mod, 1}); return;
+        }
         int m = (l + r) >> 1;
         mpe_build(tr, u << 1,     l,     m, xs);
         mpe_build(tr, u << 1 | 1, m + 1, r, xs);
@@ -493,6 +624,7 @@ $$
     // a_n = sum_{i=1..k} c[i-1] * a_{n-i}, 给定 a[0..k-1], c[0..k-1]
     static int linear_recur(vector<int> a, vector<int> c, long long n) {
         int k = (int)c.size();
+        assert(k > 0 && (int)a.size() == k && n >= 0);
         if (n < (long long)a.size()) return a[(int)n];
         vector<int> Q(k + 1, 0); Q[0] = 1;
         for (int i = 0; i < k; i++) Q[i + 1] = (mod - c[i]) % mod;
@@ -526,6 +658,7 @@ $$
 
 ```cpp
     int eval(int x) const {
+        x = (x % mod + mod) % mod;
         int r = 0;
         for (int i = size() - 1; i >= 0; i--)
             r = (1ll * r * x + a[i]) % mod;
@@ -551,7 +684,10 @@ $$
 
 线性预处理阶乘逆元和前后缀积，$O(n)$。
 
-```
+下面两段分别是独立的 `long long` 版，以及 `Poly` 类内的封装版，不要一起粘贴进 `struct Poly`。
+
+```cpp
+using ll = long long;
 ll qpow(ll a, ll b, ll p) {
     ll r = 1;
     a %= p;
@@ -605,11 +741,14 @@ ll f2(vector<ll>& y, ll k, ll p) {
     }
     return r;
 }
+```
 
 ```cpp
     static int lagrange_continuous(const vector<int>& y, long long k) {
         int n = (int)y.size();
-        if (k <= n) return y[(int)k - 1];
+        assert(n < mod);
+        if (n == 0) return 0;
+        if (1 <= k && k <= n) return y[(int)k - 1];
         vector<int> fac(n), ifac(n);
         fac[0] = 1;
         for (int i = 1; i < n; i++) fac[i] = 1ll * fac[i - 1] * i % mod;
@@ -728,3 +867,21 @@ vector<int> subset_conv(const vector<int>& f, const vector<int>& g) {
     return r;
 }
 ```
+
+---
+
+## 复杂度总结
+
+令 $n$ 表示目标系数项数，默认取满足 NTT 长度限制的范围。
+
+| 操作 | 复杂度 | 主要限制 |
+|---|---|---|
+| 多项式乘法、`shift` | $O(n\log n)$ | `shift` 需要阶乘可逆 |
+| `inv`、`ln`、`exp`、`sqrt`、`pow` | $O(n\log n)$ | 常数项有前置条件 |
+| 多项式除法 / 取模 | $O(n\log n)$ | 除数非零 |
+| 多点求值、快速插值 | $O(n\log^2 n)$ | 插值横坐标模 `mod` 两两不同 |
+| `stirling1_unsigned`、`stirling1_signed` | $O(n\log^2 n)$ | 返回固定 $n$ 的整行 |
+| `stirling2` | $O(n\log n)$ | 返回固定 $n$ 的整行 |
+| `linear_recur` | $O(k\log k\log n)$ | 递推阶数 $k$，参数 $n$ 为求值下标 |
+
+**编译建议：** `g++ -std=c++17 -O2`。同名全局 `mod` 只属于后面的 FWT、子集卷积类外函数，并非 `Poly::mod` 之外另定义一份多项式类常量。
