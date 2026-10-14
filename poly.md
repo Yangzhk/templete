@@ -181,7 +181,7 @@ vector<int> stirling1(int n) {
     if (n == 0) return {1};
     if (n == 1) return {0, 1};
     int m = n / 2;
-    auto a = stirling1_unsigned(m);
+    auto a = stirling1(m);
     auto b = poly_shift(a, m);
     auto c = mul_p(a, b);
     if (n & 1) c = mul_p(c, {n - 1, 1});
