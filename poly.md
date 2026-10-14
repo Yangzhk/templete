@@ -188,6 +188,21 @@ vector<int> stirling1(int n) {
     c.resize(n + 1);
     return c;
 }
+
+// 第一类斯特林数整行（无符号），O(n log^2 n)
+// 返回 a[k] = [n k]
+vector<int> stirling1(int n) {
+    auto dfs = [&](auto &&self, int l, int r) -> vector<int> {
+        if (l == r) return {1};
+        if (r - l == 1) return {l, 1};
+        int mid = (l + r) / 2;
+        auto a = self(self, l, mid);
+        auto b = self(self, mid, r);
+        return mul_p(a, b);
+    };
+    return dfs(dfs, 0, n);
+}
+
 vector<int> stirling2(int n) {
     assert(0 <= n && n < mod);
     vector<int> fac(n + 1), ifac(n + 1);
