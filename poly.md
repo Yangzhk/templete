@@ -176,7 +176,7 @@ vector<int> poly_shift(const vector<int> &a, int c) { // f(x+c)
 }
 
 // 斯特林数整行 O(n log^2 n) / O(n log n)
-vector<int> stirling1_unsigned(int n) {
+vector<int> stirling1(int n) {
     assert(0 <= n && n < mod);
     if (n == 0) return {1};
     if (n == 1) return {0, 1};
@@ -187,12 +187,6 @@ vector<int> stirling1_unsigned(int n) {
     if (n & 1) c = mul_p(c, {n - 1, 1});
     c.resize(n + 1);
     return c;
-}
-vector<int> stirling1_signed(int n) {
-    auto a = stirling1_unsigned(n);
-    for (int k = 0; k <= n; k++)
-        if ((n - k) & 1) a[k] = a[k] ? mod - a[k] : 0;
-    return a;
 }
 vector<int> stirling2(int n) {
     assert(0 <= n && n < mod);
@@ -209,6 +203,54 @@ vector<int> stirling2(int n) {
     auto c = mul_p(A, B);
     c.resize(n + 1);
     return c;
+}
+
+/ 第一类无符号 / 第二类斯特林数整列
+// first = true : 第一类无符号
+// first = false: 第二类
+// 返回 r[n] = S(n,k), 0 <= n <= N
+vector<int> stirling_col(int N, int k, bool first) {
+    assert(0 <= N && N < mod && k >= 0);
+    vector<int> r(N + 1);
+    if (k > N) return r;
+    if (k == 0) {
+        r[0] = 1;
+        return r;
+    }
+
+    vector<int> fac(N + 1), ifac(N + 1);
+    fac[0] = 1;
+    for (int i = 1; i <= N; i++)
+        fac[i] = 1LL * fac[i - 1] * i % mod;
+
+    ifac[N] = inv_mod(fac[N]);
+    for (int i = N; i >= 1; i--)
+        ifac[i - 1] = 1LL * ifac[i] * i % mod;
+
+    int m = N - k;
+    vector<int> a(m + 1);
+
+    for (int i = 0; i <= m; i++) {
+        if (first)
+            a[i] = 1LL * fac[i] * ifac[i + 1] % mod;
+        else
+            a[i] = ifac[i + 1];
+    }
+
+    auto b = binpow(a, k, m + 1);
+
+    for (int n = k; n <= N; n++)
+        r[n] = 1LL * fac[n] * ifac[k] % mod * b[n - k] % mod;
+
+    return r;
+}
+
+vector<int> stirling1_col(int N, int k) {
+    return stirling_col(N, k, true);
+}
+
+vector<int> stirling2_col(int N, int k) {
+    return stirling_col(N, k, false);
 }
 
 // Bostan-Mori: a_n = sum_{i=1..k} c[i-1]*a_{n-i}
