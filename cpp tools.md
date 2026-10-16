@@ -1,13 +1,3 @@
-### C++ 大数运算类
-
-```
-#include <bits/stdc++.h>
-#include <boost/multiprecision/cpp_int.hpp>
-
-using namespace std;
-using boost::multiprecision::cpp_int;
-```
-
 ### 对拍
 
 #### Linux
