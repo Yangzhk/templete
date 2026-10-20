@@ -1,3 +1,4 @@
+### 常用的 poly 板子
 ```
 #include <bits/stdc++.h>
 using namespace std;
@@ -339,72 +340,444 @@ int lagrange_continuous(const vector<int> &y, long long k) {
     }
     return ans;
 }
+```
 
-// FWT：数组长度必须是 2 的幂，全部在 mod 下运算
-void fwt_or(vector<int> &a, bool inv) {
-    int n = a.size();
-    assert(n > 0 && (n & (n - 1)) == 0);
-    for (int m = 1; m < n; m <<= 1)
-        for (int i = 0; i < n; i += m << 1)
-            for (int j = 0; j < m; j++) {
-                int &x = a[i + j], &y = a[i + j + m];
-                y = inv ? (y - x + mod) % mod : (y + x) % mod;
-            }
+
+### 子集卷积 fwt
+# FWT：原理与模板
+
+## 1. 解决什么问题
+
+给定两个长度均为 $N=2^k$ 的数组 $a,b$，求**位运算卷积**：
+
+$$
+c_s=\sum_{i\operatorname{\,op\,}j=s}a_i b_j,
+\qquad \operatorname{op}\in\{\mathrm{OR},\mathrm{AND},\mathrm{XOR}\}.
+$$
+
+暴力枚举 $(i,j)$ 是 $O(N^2)$。FWT（广义地也包括 OR/AND 的子集 Zeta 变换）把卷积转成**变换域逐点乘法**：
+
+$$
+\boxed{\ c=T^{-1}\bigl(T(a)\cdot T(b)\bigr)\ }
+$$
+
+这里的 $\cdot$ 是逐项相乘，整体复杂度 $O(N\log N)=O(k2^k)$。
+
+## 2. 三种变换的含义
+
+设 $S,T$ 是二进制掩码，$\subseteq$ 表示二进制位意义上的包含。
+
+| 运算 | 正变换 $\widehat a_S$ | 单个二进制位的合并 $(x,y)\to(\cdots)$ | 逆变换 |
+|---|---|---|---|
+| **OR** | $\displaystyle\sum_{T\subseteq S}a_T$ | $(x,x+y)$ | $(x,y-x)$ |
+| **AND** | $\displaystyle\sum_{T\supseteq S}a_T$ | $(x+y,y)$ | $(x-y,y)$ |
+| **XOR** | $\displaystyle\sum_T(-1)^{\operatorname{popcount}(S\,\&\,T)}a_T$ | $(x+y,x-y)$ | 同样合并，最后整体除以 $N$ |
+
+**为什么可以逐点乘？**
+
+- **OR**：$i\mathbin{|}j\subseteq S$ 等价于 $i\subseteq S$ 且 $j\subseteq S$，所以 $\widehat c_S=\widehat a_S\widehat b_S$。
+- **AND**：$i\mathbin{\&}j\supseteq S$ 等价于 $i\supseteq S$ 且 $j\supseteq S$，所以同理。
+- **XOR**：字符 $\chi_S(x)=(-1)^{\operatorname{popcount}(S\,\&\,x)}$ 满足 $\chi_S(i\oplus j)=\chi_S(i)\chi_S(j)$，因此同理。
+
+**直观理解：**每一位只有 $0,1$ 两种状态。三种变换都是对每一位执行一个 $2\times2$ 线性变换，然后依次处理全部 $k$ 位。XOR 的变换矩阵
+
+$$
+H=\begin{pmatrix}1&1\\1&-1\end{pmatrix},\qquad H^2=2I,
+$$
+
+所以每一位逆变换要除以 $2$，全部 $k$ 位合起来就是除以 $2^k=N$。
+
+> 注：严格分类时 OR/AND 常称为 **子集 Zeta 变换及 Möbius 反演**；竞赛中习惯把三者合称 FWT。
+
+## 3. C++17 模板（模 $998244353$）
+
+输入长度可不足 $2^k$，卷积函数会自动补零。`type`：`0=OR`、`1=AND`、`2=XOR`。
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+#define int long long
+const int mod = 998244353;
+
+int qpow(int a, int b) {
+    int res = 1;
+    for(; b; b >>= 1, a = a * a % mod)
+        if(b & 1) res = res * a % mod;
+    return res;
 }
-void fwt_and(vector<int> &a, bool inv) {
+
+// OR: [x, y] -> [x, x + y]
+void fwt_or(vector<int>& a, bool inv = false) {
     int n = a.size();
-    assert(n > 0 && (n & (n - 1)) == 0);
-    for (int m = 1; m < n; m <<= 1)
-        for (int i = 0; i < n; i += m << 1)
-            for (int j = 0; j < m; j++) {
-                int &x = a[i + j], &y = a[i + j + m];
-                x = inv ? (x - y + mod) % mod : (x + y) % mod;
-            }
-}
-void fwt_xor(vector<int> &a, bool inv) {
-    int n = a.size();
-    assert(n > 0 && (n & (n - 1)) == 0);
-    int inv2 = (mod + 1) / 2;
-    for (int m = 1; m < n; m <<= 1)
-        for (int i = 0; i < n; i += m << 1)
-            for (int j = 0; j < m; j++) {
-                int x = a[i + j], y = a[i + j + m];
-                a[i + j] = (x + y) % mod;
-                a[i + j + m] = (x - y + mod) % mod;
-                if (inv) {
-                    a[i + j] = 1LL * a[i + j] * inv2 % mod;
-                    a[i + j + m] = 1LL * a[i + j + m] * inv2 % mod;
+    for(int len = 1; len < n; len <<= 1)
+        for(int i = 0; i < n; i += len << 1)
+            for(int j = 0; j < len; j++) {
+                int &x = a[i + j], &y = a[i + j + len];
+                if(!inv) {
+                    y += x;
+                    if(y >= mod) y -= mod;
+                } else {
+                    y -= x;
+                    if(y < 0) y += mod;
                 }
             }
 }
-template<class F>
-vector<int> bit_conv(vector<int> a, vector<int> b, F fwt) {
-    assert(a.size() == b.size());
-    fwt(a, false); fwt(b, false);
-    for (int i = 0; i < (int)a.size(); i++) a[i] = 1LL * a[i] * b[i] % mod;
-    fwt(a, true);
-    return a;
+
+// AND: [x, y] -> [x + y, y]
+void fwt_and(vector<int>& a, bool inv = false) {
+    int n = a.size();
+    for(int len = 1; len < n; len <<= 1)
+        for(int i = 0; i < n; i += len << 1)
+            for(int j = 0; j < len; j++) {
+                int &x = a[i + j], &y = a[i + j + len];
+                if(!inv) {
+                    x += y;
+                    if(x >= mod) x -= mod;
+                } else {
+                    x -= y;
+                    if(x < 0) x += mod;
+                }
+            }
 }
 
-// 子集卷积：h[S] = sum_{T subseteq S} f[T]*g[S\T]，O(n^2*2^n)
-vector<int> subset_conv(const vector<int> &f, const vector<int> &g) {
-    int sz = f.size();
-    assert(sz > 0 && sz == (int)g.size() && (sz & (sz - 1)) == 0);
-    int n = __builtin_ctz((unsigned)sz);
-    vector<vector<int>> F(n + 1, vector<int>(sz)), GG(n + 1, vector<int>(sz));
-    for (int s = 0; s < sz; s++) {
-        int p = __builtin_popcount((unsigned)s);
-        F[p][s] = f[s]; GG[p][s] = g[s];
+// XOR: [x, y] -> [x + y, x - y]
+void fwt_xor(vector<int>& a, bool inv = false) {
+    int n = a.size();
+    for(int len = 1; len < n; len <<= 1)
+        for(int i = 0; i < n; i += len << 1)
+            for(int j = 0; j < len; j++) {
+                int &x = a[i + j], &y = a[i + j + len];
+                int u = x, v = y;
+                x = (u + v) % mod;
+                y = (u - v + mod) % mod;
+            }
+    if(inv) {
+        int t = qpow(n, mod - 2);  // 除以 n
+        for(auto &x : a) x = x * t % mod;
     }
-    for (int i = 0; i <= n; i++) { fwt_or(F[i], false); fwt_or(GG[i], false); }
-    vector<vector<int>> H(n + 1, vector<int>(sz));
-    for (int i = 0; i <= n; i++)
-        for (int j = 0; j <= i; j++)
-            for (int s = 0; s < sz; s++)
-                H[i][s] = (H[i][s] + 1LL * F[j][s] * GG[i - j][s]) % mod;
-    for (int i = 0; i <= n; i++) fwt_or(H[i], true);
-    vector<int> r(sz);
-    for (int s = 0; s < sz; s++) r[s] = H[__builtin_popcount((unsigned)s)][s];
-    return r;
+}
+
+// type: 0 = OR, 1 = AND, 2 = XOR
+vector<int> bit_conv(vector<int> a, vector<int> b, int type) {
+    int n = 1;
+    while(n < max(a.size(), b.size())) n <<= 1;
+    a.resize(n); b.resize(n);
+
+    auto trans = [&](vector<int>& v, bool inv) {
+        if(type == 0) fwt_or(v, inv);
+        else if(type == 1) fwt_and(v, inv);
+        else fwt_xor(v, inv);
+    };
+
+    trans(a, false);
+    trans(b, false);
+    for(int i = 0; i < n; i++) a[i] = a[i] * b[i] % mod;
+    trans(a, true);
+    return a;
 }
 ```
+
+调用：`auto c = bit_conv(a, b, 2);` 即计算 XOR 卷积。
+
+**注意：**XOR 逆变换要求 $N$ 在模意义下有逆元；对模 $998244353$、通常的 $2^k$ 长度没有问题。三种卷积的结果索引均在 $[0,N-1]$ 内。
+
+---
+
+### 99% 用不到的 poly 板子
+这份文件是**补充包**，不是另一份完整的 NTT 模板。把下面的代码直接放在原来的多项式模板**后面**即可；不重写 NTT、CRT、卷积、普通快速幂、导数、积分、平移、斯特林数、FWT 或拉格朗日插值。
+
+- **环境**：C++17，`mod = 998244353`；沿用原模板的 `vector<int>` 系数表示，系数从常数项开始。
+- **依赖**：原模板已有的 `mod`、`pw`、`inv_mod`、`mul_p`、`poly_deriv`、`poly_integ`。
+- **调用**：新增函数全部放在 `PolyExtra` 命名空间中，例如 `PolyExtra::inv(a,n)`，避免与原模板重名。
+- **长度**：FPS 系列都计算 `mod x^n`，返回**恰好 n 项**，尾项保留 0；涉及取模的辅助函数只在多点求值/插值内部使用。
+- **限制**：涉及积分、阶乘的运算按原模数要求次数低于 `mod`；卷积还受原 NTT 最大长度限制。
+
+#### 结论速览
+| 函数 | 数学意义 / 前提 | 复杂度 |
+|---|---|---|
+| `inv(a,n)` | 求 $a(x)^{-1}\bmod x^n$，$a_0\ne0$ | $O(n\log n)$ |
+| `ln(a,n)` | 求 $\ln a(x)\bmod x^n$，$a_0=1$ | $O(n\log n)$ |
+| `exp(a,n)` | 求 $e^{a(x)}\bmod x^n$，$a_0=0$ | $O(n\log n)$ |
+| `sqrt(a,n)` | 求 $b(x)^2\equiv a(x)\pmod{x^n}$；无解返回空数组 | $O(n\log n)$ |
+| `pow(a,k,n)` | 求 $a(x)^k\bmod x^n$，$k\ge0$ | $O(n\log n)$ |
+| `ProductTree(x).eval(f)` | 一次计算 $f(x_1),\ldots,f(x_n)$ | $O(n\log^2 n)$，假设 $\deg f<n$ |
+| `ProductTree(x).interpolate(y)` | 已知 $n$ 个互异点，求次数 $<n$ 的插值多项式 | $O(n\log^2 n)$ |
+
+#### 关键原理
+##### 牛顿迭代（逆 / exp / sqrt）
+多项式求逆已知 $b\equiv a^{-1}\pmod{x^m}$ 时，用
+
+$$b\leftarrow b(2-ab)\pmod{x^{2m}}$$
+
+一次把精度翻倍。
+
+对数与指数利用
+
+$$\ln a=\int\frac{a'}a\,dx,\qquad b\leftarrow b(1+a-\ln b)\pmod{x^{2m}}.$$
+
+开方利用
+
+$$b\leftarrow\frac12\left(b+\frac{a}{b}\right)\pmod{x^{2m}}.$$
+
+若 $a(x)=x^{2t}h(x)$，先对 $h$ 开方再乘 $x^t$；首个非零系数的次数为奇数时无解。常数项开方使用 Tonelli–Shanks。
+
+##### 多项式快速幂
+设 $a=x^tc(1+u)$，其中 $u(0)=0$、$c\ne0$，则
+
+$$a^k=x^{tk}c^k\exp\bigl(k\ln(1+u)\bigr).$$
+
+如果 $tk\ge n$，答案直接为零。实现已处理 $a_0=0$ 和 $k=0$。
+
+##### 多点求值与插值
+以分治乘积树存储 $M(x)=\prod_i(x-x_i)$。求值时递归取模；插值时用
+
+$$f(x)=\sum_i\frac{y_i}{M'(x_i)}\frac{M(x)}{x-x_i}.$$
+
+通过同一棵乘积树做分治合并，避免朴素的 $O(n^2)$ 插值。求值过程必须用到多项式取余，因此仅保留一个**内部取余辅助函数**，不额外提供独立的多项式除法模板。
+
+#### 完整补充代码
+```cpp
+// 以下代码直接接在已有的 mod / pw / inv_mod / mul_p / poly_deriv / poly_integ 后面。
+// 默认 mod = 998244353, 使用 C++17；不需要重复定义前置。
+namespace PolyExtra {
+using vi = vector<int>;
+
+int norm(long long x) { x %= mod; if (x < 0) x += mod; return (int)x; }
+void trim(vi &a) {
+    for (int &x : a) x = norm(x);
+    while (!a.empty() && a.back() == 0) a.pop_back();
+}
+vi cut(const vi &a, int n) {
+    vi b(n, 0);
+    for (int i = 0; i < n && i < (int)a.size(); ++i) b[i] = norm(a[i]);
+    return b;
+}
+vi add(const vi &a, const vi &b) {
+    vi c(max(a.size(), b.size()), 0);
+    for (int i = 0; i < (int)c.size(); ++i)
+        c[i] = ((i < (int)a.size() ? (long long)a[i] : 0) +
+                (i < (int)b.size() ? (long long)b[i] : 0)) % mod;
+    return c;
+}
+
+// 1. FPS 求逆: a[0] != 0, 返回 1/a mod x^n, O(n log n)
+vi inv(const vi &a, int n) {
+    if (n == 0) return {};
+    assert(!a.empty() && norm(a[0]) != 0);
+    vi b{inv_mod(norm(a[0]))};
+    for (int m = 2; (int)b.size() < n; m <<= 1) {
+        int k = min(m, n);
+        vi t = mul_p(cut(a, k), b);
+        t.resize(k);
+        for (int &x : t) x = x ? mod - x : 0;
+        t[0] = (t[0] + 2) % mod;
+        b = mul_p(b, t);
+        b.resize(k);
+    }
+    return cut(b, n);
+}
+
+// 2. FPS ln: a[0] = 1, O(n log n)
+vi ln(const vi &a, int n) {
+    if (n == 0) return {};
+    assert(!a.empty() && norm(a[0]) == 1);
+    if (n == 1) return {0};
+    vi t = mul_p(poly_deriv(cut(a, n)), inv(a, n));
+    t.resize(n - 1);
+    return poly_integ(t);  // 结果长度 n
+}
+
+// 3. FPS exp: a[0] = 0, O(n log n)
+vi exp(const vi &a, int n) {
+    if (n == 0) return {};
+    assert(a.empty() || norm(a[0]) == 0);
+    vi b{1};
+    for (int m = 2; (int)b.size() < n; m <<= 1) {
+        int k = min(m, n);
+        vi t = cut(a, k), s = ln(b, k);
+        for (int i = 0; i < k; ++i) t[i] = norm((long long)t[i] - s[i]);
+        t[0] = (t[0] + 1) % mod;
+        b = mul_p(b, t);
+        b.resize(k);
+    }
+    return cut(b, n);
+}
+
+// 模意义开方：返回较小的一个根；无根返回 -1（mod 为奇素数）
+int mod_sqrt(int a) {
+    a = norm(a);
+    if (a == 0) return 0;
+    if (pw(a, (mod - 1) / 2) != 1) return -1;
+    int q = mod - 1, s = 0;
+    while (!(q & 1)) q >>= 1, ++s;
+    int z = 2;
+    while (pw(z, (mod - 1) / 2) != mod - 1) ++z;
+    int c = pw(z, q), x = pw(a, (q + 1) / 2), t = pw(a, q), m = s;
+    while (t != 1) {
+        int i = 0, v = t;
+        while (v != 1) { v = 1LL * v * v % mod; ++i; }
+        assert(i < m);
+        int b = pw(c, 1LL << (m - i - 1));
+        x = 1LL * x * b % mod;
+        c = 1LL * b * b % mod;
+        t = 1LL * t * c % mod;
+        m = i;
+    }
+    return min(x, mod - x);
+}
+
+// 4. FPS sqrt: 求 b^2 = a mod x^n；n>0 时无解返回空数组。
+// 允许 a 前面有偶数个零；答案选定一个根。O(n log n)
+vi sqrt(const vi &a, int n) {
+    if (n == 0) return {};
+    vi A = cut(a, n);
+    int pos = 0;
+    while (pos < n && A[pos] == 0) ++pos;
+    if (pos == n) return vi(n, 0);
+    if (pos & 1) return {};
+    int sh = pos / 2, k = n - pos;
+    vi f(A.begin() + pos, A.end());
+    int c = mod_sqrt(f[0]);
+    if (c == -1) return {};
+    vi b{c};
+    const int inv2 = (mod + 1) / 2;
+    for (int m = 2; (int)b.size() < k; m <<= 1) {
+        int len = min(m, k);
+        vi t = mul_p(cut(f, len), inv(b, len));
+        t.resize(len);
+        vi nb(len);
+        for (int i = 0; i < len; ++i)
+            nb[i] = 1LL * ((i < (int)b.size() ? b[i] : 0) + (long long)t[i]) % mod * inv2 % mod;
+        b.swap(nb);
+    }
+    vi ans(n, 0);
+    for (int i = 0; i < (int)b.size(); ++i) ans[i + sh] = b[i];
+    return ans;
+}
+
+// 5. FPS pow: 求 a^k mod x^n，k >= 0；允许 a[0] = 0。O(n log n)
+vi pow(const vi &a, long long k, int n) {
+    assert(k >= 0 && n >= 0);
+    if (n == 0) return {};
+    vi ans(n, 0);
+    if (k == 0) { ans[0] = 1; return ans; }
+    vi A = cut(a, n);
+    int p = 0;
+    while (p < n && A[p] == 0) ++p;
+    if (p == n || p > (n - 1) / k) return ans;
+    int sh = p * k, len = n - sh, c = A[p];
+    vi b(len, 0);
+    int ic = inv_mod(c);
+    for (int i = 0; i < len && p + i < n; ++i) b[i] = 1LL * A[p + i] * ic % mod;
+    vi t = ln(b, len);
+    for (int &x : t) x = 1LL * x * (k % mod) % mod;
+    vi u = exp(t, len);
+    int ck = pw(c, k);
+    for (int i = 0; i < len; ++i) ans[i + sh] = 1LL * u[i] * ck % mod;
+    return ans;
+}
+
+// 内部辅助：对乘积树中的首一多项式 b 取余。
+// 不是独立的多项式除法模板；供下面的 ProductTree 使用。
+vi mod_monic(vi a, vi b) {
+    trim(a); trim(b);
+    assert(!b.empty() && b.back() == 1);
+    if (a.size() < b.size()) return a;
+    if (b.size() == 1) return {};
+    int k = (int)a.size() - (int)b.size() + 1;
+    if (min(k, (int)b.size()) <= 32) {
+        // 小规模采用朴素消元，仅保留余数。
+        for (int i = k - 1; i >= 0; --i) {
+            int c = a[i + (int)b.size() - 1];
+            for (int j = 0; j < (int)b.size(); ++j)
+                a[i + j] = norm((long long)a[i + j] - 1LL * c * b[j]);
+        }
+        a.resize(b.size() - 1);
+        trim(a);
+        return a;
+    }
+    vi ra = a, rb = b;
+    reverse(ra.begin(), ra.end());
+    reverse(rb.begin(), rb.end());
+    vi q = mul_p(cut(ra, k), inv(rb, k));
+    q.resize(k);
+    reverse(q.begin(), q.end());
+    vi qb = mul_p(q, b);
+    vi r(b.size() - 1);
+    for (int i = 0; i < (int)r.size(); ++i)
+        r[i] = norm((long long)a[i] - qb[i]);
+    trim(r);
+    return r;
+}
+
+// 6. 多点求值 & 快速插值: O(n log^2 n)；输入点可重复求值，插值需互不相同。
+struct ProductTree {
+    int n;
+    vi x;
+    vector<vi> tr;
+    explicit ProductTree(const vi &points) : n(points.size()), x(points), tr(4 * max(1, n)) {
+        for (int &v : x) v = norm(v);
+        if (n) build(1, 0, n);
+    }
+    void build(int u, int l, int r) {
+        if (r - l == 1) { tr[u] = {norm(-x[l]), 1}; return; }
+        int m = (l + r) / 2;
+        build(u * 2, l, m); build(u * 2 + 1, m, r);
+        tr[u] = mul_p(tr[u * 2], tr[u * 2 + 1]);
+    }
+    void eval_dfs(int u, int l, int r, const vi &f, vi &ans) const {
+        if (f.empty()) return;
+        if (r - l == 1) { ans[l] = f[0]; return; }
+        int m = (l + r) / 2;
+        eval_dfs(u * 2, l, m, mod_monic(f, tr[u * 2]), ans);
+        eval_dfs(u * 2 + 1, m, r, mod_monic(f, tr[u * 2 + 1]), ans);
+    }
+    vi eval(const vi &f) const {
+        vi ans(n, 0);
+        if (n) eval_dfs(1, 0, n, mod_monic(f, tr[1]), ans);
+        return ans;
+    }
+    vi interp_dfs(int u, int l, int r, const vi &w) const {
+        if (r - l == 1) return {w[l]};
+        int m = (l + r) / 2;
+        vi a = interp_dfs(u * 2, l, m, w);
+        vi b = interp_dfs(u * 2 + 1, m, r, w);
+        return add(mul_p(a, tr[u * 2 + 1]), mul_p(b, tr[u * 2]));
+    }
+    vi interpolate(const vi &y) const {
+        assert((int)y.size() == n && n < mod);
+        if (n == 0) return {};
+        vi d = eval(poly_deriv(tr[1]));
+        vi w(n);
+        for (int i = 0; i < n; ++i) {
+            assert(d[i] != 0); // 检查重根/重复插值点
+            w[i] = 1LL * norm(y[i]) * inv_mod(d[i]) % mod;
+        }
+        vi ans = interp_dfs(1, 0, n, w);
+        ans.resize(n);
+        return ans;
+    }
+};
+
+} // namespace PolyExtra
+```
+
+#### 调用示例
+```cpp
+vector<int> a = {1, 2, 3};
+auto ia = PolyExtra::inv(a, 5);       // a^{-1} mod x^5
+auto la = PolyExtra::ln(a, 5);       // ln a mod x^5
+auto ea = PolyExtra::exp({0, 1}, 5); // exp(x) mod x^5
+auto pa = PolyExtra::pow(a, 10, 5);  // a^10 mod x^5
+
+PolyExtra::ProductTree tree({1, 2, 4});
+auto ys = tree.eval({3, 2, 1});     // 求 f(1),f(2),f(4)
+auto f = tree.interpolate(ys);      // 还原次数 < 3 的 f
+```
+
+#### 注意事项
+1. `sqrt(a,n)`：当 `n>0` 时，**返回空数组表示无解**；系数全部为零时则返回长度 `n` 的零数组。只返回两个平方根中的一个（若存在）。
+2. `ProductTree`：`eval` 可以有重复的输入点；`interpolate` 必须保证输入点两两不同（模 `mod`）。其复杂度以目标次数不超过点数为常见情形。
+3. 你上传的原模板中，**`stirling1(int n)` 出现了两个同名实现**，合并成同一份 `.cpp` 前需二选一；另外注释行 `/ 第一类无符号 / 第二类斯特林数整列` 应改为 `// 第一类无符号 / 第二类斯特林数整列`，否则原文件本身不能编译。
+
+**验证**：新增代码用随机测试核对 FPS 求逆、对数/指数、平方根、快速幂和多点求值/插值的结果。
