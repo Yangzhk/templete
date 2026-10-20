@@ -483,11 +483,8 @@ vector<int> bit_conv(vector<int> a, vector<int> b, int type) {
 ---
 
 ### 99% 用不到的 poly 板子
-这份文件是**补充包**，不是另一份完整的 NTT 模板。把下面的代码直接放在原来的多项式模板**后面**即可；不重写 NTT、CRT、卷积、普通快速幂、导数、积分、平移、斯特林数、FWT 或拉格朗日插值。
-
-- **环境**：C++17，`mod = 998244353`；沿用原模板的 `vector<int>` 系数表示，系数从常数项开始。
 - **依赖**：原模板已有的 `mod`、`pw`、`inv_mod`、`mul_p`、`poly_deriv`、`poly_integ`。
-- **调用**：新增函数全部放在 `PolyExtra` 命名空间中，例如 `PolyExtra::inv(a,n)`，避免与原模板重名。
+- **调用**：新增函数直接定义在全局作用域，例如 `inv(a,n)`；为避免与 `std::norm` 重名，辅助函数使用 `norm_mod`。
 - **长度**：FPS 系列都计算 `mod x^n`，返回**恰好 n 项**，尾项保留 0；涉及取模的辅助函数只在多点求值/插值内部使用。
 - **限制**：涉及积分、阶乘的运算按原模数要求次数低于 `mod`；卷积还受原 NTT 最大长度限制。
 
@@ -536,21 +533,22 @@ $$f(x)=\sum_i\frac{y_i}{M'(x_i)}\frac{M(x)}{x-x_i}.$$
 
 #### 完整补充代码
 ```cpp
-// 以下代码直接接在已有的 mod / pw / inv_mod / mul_p / poly_deriv / poly_integ 后面。
-// 默认 mod = 998244353, 使用 C++17；不需要重复定义前置。
-namespace PolyExtra {
 using vi = vector<int>;
 
-int norm(long long x) { x %= mod; if (x < 0) x += mod; return (int)x; }
+//取模规范化
+int norm_mod(long long x) { x %= mod; if (x < 0) x += mod; return (int)x; }
+//删除多项式末尾多余的零
 void trim(vi &a) {
-    for (int &x : a) x = norm(x);
+    for (int &x : a) x = norm_mod(x);
     while (!a.empty() && a.back() == 0) a.pop_back();
 }
+//截取前 n 项，不足补零
 vi cut(const vi &a, int n) {
     vi b(n, 0);
-    for (int i = 0; i < n && i < (int)a.size(); ++i) b[i] = norm(a[i]);
+    for (int i = 0; i < n && i < (int)a.size(); ++i) b[i] = norm_mod(a[i]);
     return b;
 }
+//多项式加法
 vi add(const vi &a, const vi &b) {
     vi c(max(a.size(), b.size()), 0);
     for (int i = 0; i < (int)c.size(); ++i)
@@ -562,8 +560,8 @@ vi add(const vi &a, const vi &b) {
 // 1. FPS 求逆: a[0] != 0, 返回 1/a mod x^n, O(n log n)
 vi inv(const vi &a, int n) {
     if (n == 0) return {};
-    assert(!a.empty() && norm(a[0]) != 0);
-    vi b{inv_mod(norm(a[0]))};
+    assert(!a.empty() && norm_mod(a[0]) != 0);
+    vi b{inv_mod(norm_mod(a[0]))};
     for (int m = 2; (int)b.size() < n; m <<= 1) {
         int k = min(m, n);
         vi t = mul_p(cut(a, k), b);
@@ -579,7 +577,7 @@ vi inv(const vi &a, int n) {
 // 2. FPS ln: a[0] = 1, O(n log n)
 vi ln(const vi &a, int n) {
     if (n == 0) return {};
-    assert(!a.empty() && norm(a[0]) == 1);
+    assert(!a.empty() && norm_mod(a[0]) == 1);
     if (n == 1) return {0};
     vi t = mul_p(poly_deriv(cut(a, n)), inv(a, n));
     t.resize(n - 1);
@@ -589,12 +587,12 @@ vi ln(const vi &a, int n) {
 // 3. FPS exp: a[0] = 0, O(n log n)
 vi exp(const vi &a, int n) {
     if (n == 0) return {};
-    assert(a.empty() || norm(a[0]) == 0);
+    assert(a.empty() || norm_mod(a[0]) == 0);
     vi b{1};
     for (int m = 2; (int)b.size() < n; m <<= 1) {
         int k = min(m, n);
         vi t = cut(a, k), s = ln(b, k);
-        for (int i = 0; i < k; ++i) t[i] = norm((long long)t[i] - s[i]);
+        for (int i = 0; i < k; ++i) t[i] = norm_mod((long long)t[i] - s[i]);
         t[0] = (t[0] + 1) % mod;
         b = mul_p(b, t);
         b.resize(k);
@@ -604,7 +602,7 @@ vi exp(const vi &a, int n) {
 
 // 模意义开方：返回较小的一个根；无根返回 -1（mod 为奇素数）
 int mod_sqrt(int a) {
-    a = norm(a);
+    a = norm_mod(a);
     if (a == 0) return 0;
     if (pw(a, (mod - 1) / 2) != 1) return -1;
     int q = mod - 1, s = 0;
@@ -689,7 +687,7 @@ vi mod_monic(vi a, vi b) {
         for (int i = k - 1; i >= 0; --i) {
             int c = a[i + (int)b.size() - 1];
             for (int j = 0; j < (int)b.size(); ++j)
-                a[i + j] = norm((long long)a[i + j] - 1LL * c * b[j]);
+                a[i + j] = norm_mod((long long)a[i + j] - 1LL * c * b[j]);
         }
         a.resize(b.size() - 1);
         trim(a);
@@ -704,7 +702,7 @@ vi mod_monic(vi a, vi b) {
     vi qb = mul_p(q, b);
     vi r(b.size() - 1);
     for (int i = 0; i < (int)r.size(); ++i)
-        r[i] = norm((long long)a[i] - qb[i]);
+        r[i] = norm_mod((long long)a[i] - qb[i]);
     trim(r);
     return r;
 }
@@ -715,11 +713,11 @@ struct ProductTree {
     vi x;
     vector<vi> tr;
     explicit ProductTree(const vi &points) : n(points.size()), x(points), tr(4 * max(1, n)) {
-        for (int &v : x) v = norm(v);
+        for (int &v : x) v = norm_mod(v);
         if (n) build(1, 0, n);
     }
     void build(int u, int l, int r) {
-        if (r - l == 1) { tr[u] = {norm(-x[l]), 1}; return; }
+        if (r - l == 1) { tr[u] = {norm_mod(-x[l]), 1}; return; }
         int m = (l + r) / 2;
         build(u * 2, l, m); build(u * 2 + 1, m, r);
         tr[u] = mul_p(tr[u * 2], tr[u * 2 + 1]);
@@ -750,7 +748,7 @@ struct ProductTree {
         vi w(n);
         for (int i = 0; i < n; ++i) {
             assert(d[i] != 0); // 检查重根/重复插值点
-            w[i] = 1LL * norm(y[i]) * inv_mod(d[i]) % mod;
+            w[i] = 1LL * norm_mod(y[i]) * inv_mod(d[i]) % mod;
         }
         vi ans = interp_dfs(1, 0, n, w);
         ans.resize(n);
@@ -758,18 +756,17 @@ struct ProductTree {
     }
 };
 
-} // namespace PolyExtra
 ```
 
 #### 调用示例
 ```cpp
 vector<int> a = {1, 2, 3};
-auto ia = PolyExtra::inv(a, 5);       // a^{-1} mod x^5
-auto la = PolyExtra::ln(a, 5);       // ln a mod x^5
-auto ea = PolyExtra::exp({0, 1}, 5); // exp(x) mod x^5
-auto pa = PolyExtra::pow(a, 10, 5);  // a^10 mod x^5
+auto ia = inv(a, 5);       // a^{-1} mod x^5
+auto la = ln(a, 5);       // ln a mod x^5
+auto ea = exp({0, 1}, 5); // exp(x) mod x^5
+auto pa = pow(a, 10, 5);  // a^10 mod x^5
 
-PolyExtra::ProductTree tree({1, 2, 4});
+ProductTree tree({1, 2, 4});
 auto ys = tree.eval({3, 2, 1});     // 求 f(1),f(2),f(4)
 auto f = tree.interpolate(ys);      // 还原次数 < 3 的 f
 ```
