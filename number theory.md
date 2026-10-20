@@ -8,6 +8,7 @@
 - [二次剩余](#二次剩余)
 - [Miller-Rabin \& Pollard Rho](#miller-rabin--pollard-rho)
 ### 类欧几里得
+**1. 普通求和**
 ```
 //(ai + b) / c, 0 <= i <= n
 #define int long long
@@ -33,6 +34,8 @@ int floor_sum(int n, int a, int b, int c) {
     return ans;
 }
 ```
+
+**2. 三种求和**
 
 ```
 //f : 1, g : i, h : ()^2
