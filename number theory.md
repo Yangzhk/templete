@@ -1,6 +1,7 @@
 - [类欧几里得](#类欧几里得)
 - [莫比乌斯函数](#莫比乌斯函数)
 - [数论分块](#数论分块)
+- [杜教筛](#杜教筛)
 - [中国剩余定理](#中国剩余定理)
 - [Lucas 定理](#lucas-定理)
 - [BSGS（离散对数）](#bsgs离散对数)
@@ -184,6 +185,142 @@ long long sumDiv2(long long n, long long m, vector<long long>& sf) {
     return ans;
 }
 ```
+
+### 杜教筛
+
+设 $F(n)=\sum_{i=1}^{n}f(i)$。利用狄利克雷卷积 $f*1=g$，可得
+
+$$
+F(n)=\sum_{i=1}^{n}g(i)-\sum_{i=2}^{n}F\left(\left\lfloor\frac ni\right\rfloor\right).
+$$
+
+后面的求和使用**整除分块 + 记忆化搜索**。预处理到 $B=\lfloor n^{2/3}\rfloor$；以下两份模板**独立使用**。
+
+#### 1. 莫比乌斯函数前缀和
+
+由 $\mu*1=\varepsilon$，其中 $\varepsilon(1)=1$、其余为 $0$，得到
+
+$$
+\boxed{M(n)=\sum_{i=1}^{n}\mu(i)=1-\sum_{i=2}^{n}M\left(\left\lfloor\frac ni\right\rfloor\right)}.
+$$
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+#define int long long
+#define rep(i, a, b) for(int i = a; i <= b; i++)
+
+int B;
+vector<int> mu, p, vis, s;
+map<int, int> mp;
+
+void init(int n) {
+    B = n;
+    p.clear(); mp.clear();
+    mu.assign(n + 1, 0);
+    vis.assign(n + 1, 0);
+    s.assign(n + 1, 0);
+    mu[1] = 1;
+
+    rep(i, 2, n) {
+        if(!vis[i]) {
+            p.push_back(i);
+            mu[i] = -1;
+        }
+        for(auto j : p) {
+            if(i * j > n) break;
+            vis[i * j] = 1;
+            if(i % j == 0) {
+                mu[i * j] = 0;
+                break;
+            }
+            mu[i * j] = -mu[i];
+        }
+    }
+    rep(i, 1, n) s[i] = s[i - 1] + mu[i];
+}
+
+int get(int n) {
+    if(n <= B) return s[n];
+    if(mp.count(n)) return mp[n];
+
+    int ans = 1;
+    for(int l = 2, r; l <= n; l = r + 1) {
+        r = n / (n / l);
+        ans -= (r - l + 1) * get(n / l);
+    }
+    return mp[n] = ans;
+}
+```
+
+#### 2. 欧拉函数前缀和
+
+由 $\varphi*1=\operatorname{id}$（即 $\sum_{d\mid n}\varphi(d)=n$），得到
+
+$$
+\boxed{\Phi(n)=\sum_{i=1}^{n}\varphi(i)=\frac{n(n+1)}2-\sum_{i=2}^{n}\Phi\left(\left\lfloor\frac ni\right\rfloor\right)}.
+$$
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+#define int long long
+#define rep(i, a, b) for(int i = a; i <= b; i++)
+
+int B;
+vector<int> phi, p, vis, s;
+map<int, int> mp;
+
+void init(int n) {
+    B = n;
+    p.clear(); mp.clear();
+    phi.assign(n + 1, 0);
+    vis.assign(n + 1, 0);
+    s.assign(n + 1, 0);
+    phi[1] = 1;
+
+    rep(i, 2, n) {
+        if(!vis[i]) {
+            p.push_back(i);
+            phi[i] = i - 1;
+        }
+        for(auto j : p) {
+            if(i * j > n) break;
+            vis[i * j] = 1;
+            if(i % j == 0) {
+                phi[i * j] = phi[i] * j;
+                break;
+            }
+            phi[i * j] = phi[i] * (j - 1);
+        }
+    }
+    rep(i, 1, n) s[i] = s[i - 1] + phi[i];
+}
+
+int get(int n) {
+    if(n <= B) return s[n];
+    if(mp.count(n)) return mp[n];
+
+    int ans = n * (n + 1) / 2;
+    for(int l = 2, r; l <= n; l = r + 1) {
+        r = n / (n / l);
+        ans -= (r - l + 1) * get(n / l);
+    }
+    return mp[n] = ans;
+}
+```
+
+#### 调用与复杂度
+
+```cpp
+init(max(1LL, (int)pow((long double)n, 2.0L / 3)));
+cout << get(n) << '\n';
+```
+
+- 整除分块右端点：$r=\left\lfloor n/\lfloor n/l\rfloor\right\rfloor$。
+- `map` 版本：时间 $O(n^{2/3}\log n)$，空间 $O(n^{2/3})$。
+- 不取模；$\varphi$ 前缀和注意 `long long` 溢出（例如建议 $n\le 10^9$）。
+
 
 ### 中国剩余定理
 
