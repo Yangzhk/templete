@@ -682,7 +682,7 @@ struct P {
 
     /*极角排序
     bool operator < (P p) const {
-        if(quad() != b.quad()) return quad() < p.quad();
+        if(quad() != p.quad()) return quad() < p.quad();
         return sign(det(p)) == -1;
     } 
     */
