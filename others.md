@@ -809,6 +809,34 @@ vector<P> convexHull(vector<P> ps) {
     return qs;
 }
 
+bool inConvex(const vector<P>& ps, P p, bool strict = false) {
+    int n = ps.size();
+    if(n == 0) return false;
+    if(n == 1) return !strict && ps[0] == p;
+    if(n == 2) return !strict && onSeg(ps[0], ps[1], p);
+
+    int a = crossOp(ps[0], ps[1], p);
+    int b = crossOp(ps[0], ps[n-1], p);
+
+    if(strict) {
+        if(a <= 0 || b >= 0) return false;
+    } else {
+        if(a < 0 || b > 0) return false;
+        if(a == 0) return onSeg(ps[0], ps[1], p);
+        if(b == 0) return onSeg(ps[0], ps[n-1], p);
+    }
+
+    int l = 1, r = n - 1;
+    while(r - l > 1) {
+        int mid = (l + r) >> 1;
+        if(crossOp(ps[0], ps[mid], p) >= 0) l = mid;
+        else r = mid;
+    }
+
+    int c = crossOp(ps[l], ps[r], p);
+    return strict ? c > 0 : c >= 0;
+}
+
 tp dist2(P a, P b) { return (a - b).abs2(); }
 
 db convexDiameter(vector<P> ps) { // 旋转卡尺
