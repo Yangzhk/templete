@@ -916,34 +916,23 @@ tp bpmj(vector<L> s) {
     vector<L> q(n + 2);
     vector<P> t(n + 2); 
     
-    // 现代写法的核心：从 1 开始，彻底抛弃错位的下标
     int l = 1, r = 0;   
     
     for (int i = 0; i < n; ++i) {
-        // 极角相同时，由于排序已经把最严的排在最前面了，后续平行的直接忽略
         if (i > 0 && cmp(s[i].ang, s[i - 1].ang) == 0) continue;
         
-        // 弹出队尾：如果队尾交点 t[r-1] 被当前半平面 s[i] 切掉了（在右侧或共线）
         while (l < r && crossOp(s[i].a, s[i].b, t[r - 1]) <= 0) r--;
-        
-        // 弹出队头：如果队头交点 t[l] 被当前半平面 s[i] 切掉了
         while (l < r && crossOp(s[i].a, s[i].b, t[l]) <= 0) l++;
         
-        q[++r] = s[i]; // 当前直线入队
+        q[++r] = s[i];
         
-        // 队列里至少有两条线时，求最新两条线的交点，存入 t[r-1]
         if (l < r) {
             t[r - 1] = isLL(q[r].a, q[r].b, q[r - 1].a, q[r - 1].b); 
         }
     }
     
-    // 闭环处理：最后用队头的一刀，再检查并淘汰一次不合格的队尾
     while (l < r && crossOp(q[l].a, q[l].b, t[r - 1]) <= 0) r--;
-    
-    // 如果有效半平面数量不足以围成多边形（少于3个），面积为 0
     if (r - l <= 1) return 0; 
-    
-    // 补齐多边形最后首尾相连的那个交点
     t[r] = isLL(q[l].a, q[l].b, q[r].a, q[r].b);
     
     vector<P> poly;
