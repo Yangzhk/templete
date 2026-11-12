@@ -1,4 +1,5 @@
 ### 常用的 poly 板子
+
 ```cpp
 #include <bits/stdc++.h>
 using namespace std;
@@ -532,6 +533,7 @@ $$f(x)=\sum_i\frac{y_i}{M'(x_i)}\frac{M(x)}{x-x_i}.$$
 通过同一棵乘积树做分治合并，避免朴素的 $O(n^2)$ 插值。求值过程必须用到多项式取余，因此仅保留一个**内部取余辅助函数**，不额外提供独立的多项式除法模板。
 
 #### 完整补充代码
+
 ```cpp
 using vi = vector<int>;
 
@@ -759,6 +761,7 @@ struct ProductTree {
 ```
 
 #### 调用示例
+
 ```cpp
 vector<int> a = {1, 2, 3};
 auto ia = inv(a, 5);       // a^{-1} mod x^5
