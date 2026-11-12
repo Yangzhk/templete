@@ -24,6 +24,7 @@
 ---
 
 ### 模运算重载
+
 ```cpp
 struct Z {
     ll x;
@@ -80,6 +81,7 @@ int C(int x, int y){
 ```
 
 ### 矩阵运算类
+
 ```cpp
 /*
 重载运算: 矩阵加 / 减 / 乘 / 乘方 / 比较
@@ -130,6 +132,7 @@ struct matrix{
 ```
 
 ### 普通高斯消元
+
 ```cpp
 #define int long long
 const int mod = 998244353;
@@ -182,6 +185,7 @@ int gauss(vector<vector<int>> a, vector<int> &x) {
 ```
 
 ### 行列式
+
 ```cpp
 int det(vector<vector<int>> a) {
     int n = a.size();
@@ -1166,6 +1170,7 @@ for(int i=1;i<=n;i++){
 ```
 
 ### 弱周期引理
+
 ```cpp
 int fail[N], diff[N], top[N];
 
@@ -1215,6 +1220,7 @@ void jump(int len) {
 ### fail 链路径压缩
 fail[x]：普通 KMP，跳到下一个 border。
 fa[x]：在 fail 链上压缩掉一批“下一个字符相同”的 border，直接跳到第一个需要处理的位置。
+
 ```cpp
 int n;
 int fail[N], fa[N];
@@ -1258,7 +1264,9 @@ void solve()
     }
 }
 ```
+
 ### ntt
+
 ```cpp
 #include <bits/stdc++.h>
 using namespace std;
