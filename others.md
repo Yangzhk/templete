@@ -24,7 +24,7 @@
 ---
 
 ### 模运算重载
-```
+```cpp
 struct Z {
     ll x;
     Z(ll v = 0) : x((v % mod + mod) % mod) {}
@@ -48,7 +48,7 @@ struct Z {
 
 ### 模运算
 
-```
+```cpp
 int fac[N], inv[N];
 
 int qpow(int a, int v = mod - 2){
@@ -80,7 +80,7 @@ int C(int x, int y){
 ```
 
 ### 矩阵运算类
-```
+```cpp
 /*
 重载运算: 矩阵加 / 减 / 乘 / 乘方 / 比较
 */
@@ -130,7 +130,7 @@ struct matrix{
 ```
 
 ### 普通高斯消元
-```
+```cpp
 #define int long long
 const int mod = 998244353;
 
@@ -182,7 +182,7 @@ int gauss(vector<vector<int>> a, vector<int> &x) {
 ```
 
 ### 行列式
-```
+```cpp
 int det(vector<vector<int>> a) {
     int n = a.size();
     int ans = 1;
@@ -215,7 +215,7 @@ int det(vector<vector<int>> a) {
 
 ### 莫队
 
-```
+```cpp
 void add(int x) {
     cnt[x]++;
     if (cnt[x] == 1) cur++;  // 示例：不同数个数
@@ -315,7 +315,7 @@ void init(int n) {
 
 ### zkw 费用流
 
-```
+```cpp
 
 inline bool spfa() {
     for (re int i = 1; i <= n; ++i) vis[i] = false, deep[i] = INF;
@@ -644,7 +644,7 @@ void init(int n) {
 
 ### 计算几何
 
-```
+```cpp
 #include <bits/stdc++.h>
 
 #define rep(i, a, b) for(int i = a; i <= b; i++)
@@ -947,7 +947,7 @@ tp bpmj(vector<L> s) {
 
 ### 三维点类
 
-```
+```cpp
 const double EPS = 1e-12;
 const double pi = 3.141593;
 
@@ -1132,7 +1132,7 @@ for (int i = 0; i < n; i++) {
 
 ### 三元环计数
 
-```
+```cpp
 for(int i=1;i<=m;i++) deg[u[i]]++,deg[v[i]]++;
 for(int i=1;i<=m;i++){
 	if(make_pair(deg[u[i]],u[i]) > make_pair(deg[v[i]],v[i])) swap(u[i],v[i]);
@@ -1148,7 +1148,7 @@ for(int i=1;i<=n;i++){
 
 ### 四元环计数
 
-```
+```cpp
 for(int i=1;i<=m;i++) deg[u[i]]++,deg[v[i]]++;
 for(int i=1;i<=m;i++){
 	if(make_pair(deg[u[i]],u[i]) > make_pair(deg[v[i]],v[i])) swap(u[i],v[i]);
@@ -1166,7 +1166,7 @@ for(int i=1;i<=n;i++){
 ```
 
 ### 弱周期引理
-```
+```cpp
 int fail[N], diff[N], top[N];
 
 void build(const string& s) {
@@ -1215,7 +1215,7 @@ void jump(int len) {
 ### fail 链路径压缩
 fail[x]：普通 KMP，跳到下一个 border。
 fa[x]：在 fail 链上压缩掉一批“下一个字符相同”的 border，直接跳到第一个需要处理的位置。
-```
+```cpp
 int n;
 int fail[N], fa[N];
 char s[N];
@@ -1259,7 +1259,7 @@ void solve()
 }
 ```
 ### ntt
-```
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 
