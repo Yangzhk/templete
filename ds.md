@@ -1,6 +1,4 @@
-# 数据结构
-
-## 目录
+# 目录
 - [st 表](#st-表)
 - [01 trie](#01-trie)
 - [Segment Tree Beats（吉司机）](#segment-tree-beats吉司机)
