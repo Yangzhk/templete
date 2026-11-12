@@ -7,7 +7,8 @@
 - [BSGS（离散对数）](#bsgs离散对数)
 - [二次剩余](#二次剩余)
 - [Miller-Rabin \& Pollard Rho](#miller-rabin--pollard-rho)
-### 类欧几里得
+
+## 类欧几里得
 **1. 普通求和**
 ```
 //(ai + b) / c, 0 <= i <= n
@@ -122,7 +123,7 @@ Node euclid(int n, int a, int b, int c) {
 
 ```
 
-### 莫比乌斯函数
+## 莫比乌斯函数
 
 ```
 vector<int> mu(N), primes;
@@ -164,7 +165,7 @@ int getmu(int x) { // O(sqrt(n)) 求单个 mobius 函数
 }
 ```
 
-### 数论分块
+## 数论分块
 
 ```
 // sum_{i=1..n} floor(n/i), O(sqrt(n))
@@ -189,7 +190,7 @@ long long sumDiv2(long long n, long long m, vector<long long>& sf) {
 }
 ```
 
-### 杜教筛
+## 杜教筛
 
 设 $F(n)=\sum_{i=1}^{n}f(i)$。利用狄利克雷卷积 $f*1=g$，可得
 
@@ -199,7 +200,7 @@ $$
 
 后面的求和使用**整除分块 + 记忆化搜索**。预处理到 $B=\lfloor n^{2/3}\rfloor$；以下两份模板**独立使用**。
 
-#### 1. 莫比乌斯函数前缀和
+### 1. 莫比乌斯函数前缀和
 
 由 $\mu*1=\varepsilon$，其中 $\varepsilon(1)=1$、其余为 $0$，得到
 
@@ -256,7 +257,7 @@ int get(int n) {
 }
 ```
 
-#### 2. 欧拉函数前缀和
+### 2. 欧拉函数前缀和
 
 由 $\varphi*1=\operatorname{id}$（即 $\sum_{d\mid n}\varphi(d)=n$），得到
 
@@ -313,7 +314,7 @@ int get(int n) {
 }
 ```
 
-#### 调用与复杂度
+### 调用与复杂度
 
 ```cpp
 init(max(1LL, (int)pow((long double)n, 2.0L / 3)));
@@ -325,7 +326,7 @@ cout << get(n) << '\n';
 - 不取模；$\varphi$ 前缀和注意 `long long` 溢出（例如建议 $n\le 10^9$）。
 
 
-### 中国剩余定理
+## 中国剩余定理
 
 上面算法计算所得的 $x$ 对于任意 $i = 1,2,\cdots,k$ 满足
 $$
@@ -371,7 +372,7 @@ LL CRT(int k, LL* a, LL* r) {
 
 ```
 
-### Lucas 定理
+## Lucas 定理
 
 对**素数** $p$：
 
@@ -405,7 +406,7 @@ long long Lucas(long long n, long long m, long long p) {
 }
 ```
 
-### BSGS（离散对数）
+## BSGS（离散对数）
 
 求解 $a^x \equiv b \pmod p$，先考虑 $\gcd(a, p) = 1$ 的情形。
 
@@ -469,7 +470,7 @@ long long exBSGS(long long a, long long b, long long p) {
 }
 ```
 
-### 二次剩余
+## 二次剩余
 
 ```
 #include <iostream>
@@ -552,7 +553,7 @@ int main() {
 }
 ```
 
-### Miller-Rabin & Pollard Rho
+## Miller-Rabin & Pollard Rho
 
 **Miller-Rabin**：写 $n - 1 = 2^s \cdot d$（$d$ 奇）。若 $n$ 为奇素数，则对任意 $\gcd(a, n) = 1$，要么 $a^d \equiv 1$，要么存在 $0 \le r < s$ 使 $a^{2^r d} \equiv -1 \pmod n$。取见证集 $\{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37\}$ 即可对 $n < 2^{64}$ 给出**确定性**判定。
 
