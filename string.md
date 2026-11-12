@@ -72,7 +72,7 @@ vector<int> min_borders(const string &s) {
 ```
 
 **弱周期引理:**
-```
+```cpp
 #include <iostream>
 #include <string>
 
@@ -277,7 +277,7 @@ vector<int> manacher(const string &s) {
 
 ## 7. 后缀数组 - O(n log n)
 
-```
+```cpp
 const int N = 1000005; 
 
 int sa[N];

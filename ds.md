@@ -16,7 +16,7 @@
 
 ## st 表
 
-```
+```cpp
 struct ST {
     static const int LOG = 20;
     int n;
@@ -48,7 +48,7 @@ struct ST {
 
 ## 01 trie
 
-```
+```cpp
 struct Trie {
     static const int B = 60;
     int tot = 1;
@@ -513,7 +513,7 @@ struct LCT {
 };
 ```
 
-```
+```cpp
 // 有根树的写法(在无根树基础上改)
 bool link(int x, int y) {
     if (findRoot(x) != x) return false;
@@ -532,7 +532,7 @@ void cut(int x) {
 }
 ```
 
-```
+```cpp
 //有根树的完整模板
 struct LCT {
     struct Node { int fa, ch[2]; ll val, sum; };
