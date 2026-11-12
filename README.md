@@ -1,4 +1,3 @@
-
 # Yangzhk Wiki
 
 个人 ACM/ICPC 算法竞赛模板库。
