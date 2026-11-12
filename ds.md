@@ -114,7 +114,7 @@ struct Trie {
 
 ---
 
-### Segment Tree Beats（吉司机）
+## Segment Tree Beats（吉司机）
 
 支持 **区间对 $v$ 取 min**、区间加、区间求和、区间最大值。
 节点维护：最大值 `mx`、严格次大值 `se`、最大值出现次数 `cnt`、和。
@@ -198,7 +198,7 @@ struct SegBeats {
 均摊复杂度 $O(n \log^2 n)$。同时支持 chmax 时还需对称维护最小值与严格次小值。
 
 
-### 李超线段树
+## 李超线段树
 
 支持插入 直线 / 线段，单点查 $\max$（或 $\min$）。每个区间存当前**最优**直线，递归下放被覆盖的次优直线。
 
@@ -249,7 +249,7 @@ struct LiChao {
 
 ---
 
-### Splay
+## Splay
 
 经典区间平衡树，常数大但实现紧凑；序列翻转、LCT 实现核心。
 
@@ -291,6 +291,7 @@ struct Splay {
 
 ---
 
+## 莫队
 ### 普通莫队
 
 排序后双指针离线处理区间询问。块大小取 $\sqrt n$，奇偶分块（奇数块 $r$ 升序 / 偶数块 $r$ 降序）减少常数。
@@ -368,9 +369,7 @@ auto toggle = [&](int u) { if (vis[u]) del(a[u]); else add(a[u]); vis[u] ^= 1; }
 
 ---
 
-## 高阶数据结构
-
-### K-D Tree
+## K-D Tree
 
 二维点集近邻查询、矩形询问、带替换/删除（懒重构）。每隔 $\sqrt{\text{节点数}}$ 重构保持平衡。
 
@@ -419,7 +418,7 @@ struct KD {
 
 矩形询问 $O(\sqrt n)$，最近点 $O(\log n)$ 期望。
 
-### 笛卡尔树
+## 笛卡尔树
 
 按下标作 BST、按权值作堆。$O(n)$ 单调栈构造，常用于 RMQ ↔ LCA 转化、最大子矩形。
 
@@ -437,7 +436,7 @@ for (int i = 0; i < n; i++) {
 }
 ```
 
-### Link-Cut Tree
+## Link-Cut Tree
 
 动态树问题（树边插删 + 路径查询）。底层是若干棵 Splay，按 preferred path 维护 prefer-child 关系。
 
