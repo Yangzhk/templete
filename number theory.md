@@ -10,7 +10,7 @@
 
 ## 类欧几里得
 **1. 普通求和**
-```
+```cpp
 //(ai + b) / c, 0 <= i <= n
 #define int long long
 
@@ -38,7 +38,7 @@ int floor_sum(int n, int a, int b, int c) {
 
 **2. 三种求和**
 
-```
+```cpp
 //f : 1, g : i, h : ()^2
 
 #define int long long
@@ -75,7 +75,7 @@ Node euclid(int n, int a, int b, int c) {
 
 ```
 
-```
+```cpp
 //带模数
 
 #define int long long
@@ -125,7 +125,7 @@ Node euclid(int n, int a, int b, int c) {
 
 ## 莫比乌斯函数
 
-```
+```cpp
 vector<int> mu(N), primes;
 vector<bool> isprime(N, true);
 
@@ -167,7 +167,7 @@ int getmu(int x) { // O(sqrt(n)) 求单个 mobius 函数
 
 ## 数论分块
 
-```
+```cpp
 // sum_{i=1..n} floor(n/i), O(sqrt(n))
 long long sumDiv(long long n) {
     long long ans = 0;
@@ -358,7 +358,7 @@ x
 \end{aligned}
 $$
 
-```
+```cpp
 LL CRT(int k, LL* a, LL* r) {
     LL n = 1, ans = 0;
     for (int i = 1; i <= k; i++) n = n * r[i];
@@ -382,7 +382,7 @@ $$
 
 适用于 $n, m$ 极大但 $p$ 较小（$p \le 10^5$ 量级）的二项式系数取模。时间复杂度 $O(p + \log_p n)$。
 
-```
+```cpp
 long long lucas_pow(long long a, long long b, long long p) {
     long long r = 1; a %= p;
     for (; b; b >>= 1, a = a * a % p) if (b & 1) r = r * a % p;
@@ -417,7 +417,7 @@ $$
 
 枚举 $j$ 把 $b a^j$ 入哈希表，再枚举 $i$ 查表。时间复杂度 $O(\sqrt p)$。
 
-```
+```cpp
 long long bsgs_pow(long long a, long long b, long long p) {
     long long r = 1; a %= p;
     for (; b; b >>= 1, a = a * a % p) if (b & 1) r = r * a % p;
@@ -472,7 +472,7 @@ long long exBSGS(long long a, long long b, long long p) {
 
 ## 二次剩余
 
-```
+```cpp
 #include <iostream>
 #include <random>
 
@@ -559,7 +559,7 @@ int main() {
 
 **Pollard Rho**：迭代 $x_{k+1} = x_k^2 + c \pmod n$ 产生 $\rho$ 形循环，期望 $O(n^{1/4})$ 步通过 $\gcd(|x - y|, n)$ 找到非平凡因子。
 
-```
+```cpp
 using u64 = unsigned long long;
 using u128 = __uint128_t;
 
