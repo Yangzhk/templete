@@ -1,5 +1,5 @@
 ### 常用的 poly 板子
-```
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 
