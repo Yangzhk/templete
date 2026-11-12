@@ -139,7 +139,7 @@ for (int k = 1; k <= n; k++) {
 ```
 
 ### Johnson 全源最短路
-```
+```cpp
 #include <vector>
 #include <queue>
 
@@ -235,7 +235,7 @@ bool johnson(int n) {
 
 每轮为每个连通块找最短出边并合并，$O(m \log n)$。**适用场景**：边由某种规则隐式生成（如完全图按位运算定义边权），无法显式建图时仍可逐位/逐组找最优出边。
 
-```
+```cpp
 int n, m;
 int fa[N];
 
@@ -441,7 +441,7 @@ vector<int> topo(int n, vector<vector<int>>& g) {
 
 ### 树哈希
 
-```
+```cpp
 //树同构
 using ull = unsigned long long;
 
@@ -943,7 +943,7 @@ $$
     * 非主对角线 $L[i][j]$ 填节点 $i$ 到 $j$ 的有向边数的相反数（即 $-cnt(i \to j)$）。
 3. **求行列式**：随便挑一个度数不为 0 的节点 $w$（比如节点 1），把矩阵的第 $w$ 行和第 $w$ 列删掉。对剩下大小为 $(n-1) \times (n-1)$ 的矩阵做高斯消元求行列式，得到的就是 $T^{root}_w(G)$。
 4. **注意**: 求欧拉回路的时候, 一定要手动删掉 0 度点, 否则算出的行列式不对.
-```
+```cpp
 #define int long long // 习惯全开 long long 防止乘法溢出
 const int MOD = 998244353;
 const int MAXN = 505;
