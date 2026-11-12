@@ -139,6 +139,7 @@ for (int k = 1; k <= n; k++) {
 ```
 
 ### Johnson 全源最短路
+
 ```cpp
 #include <vector>
 #include <queue>
@@ -219,6 +220,7 @@ bool johnson(int n) {
     return true;
 }
 ```
+
 ---
 
 ## 最小生成树
@@ -284,6 +286,7 @@ int boruvka() {
     return ans;
 }
 ```
+
 ---
 
 ## 连通性

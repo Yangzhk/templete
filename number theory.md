@@ -10,6 +10,7 @@
 
 ## 类欧几里得
 **1. 普通求和**
+
 ```cpp
 //(ai + b) / c, 0 <= i <= n
 #define int long long

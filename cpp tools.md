@@ -1,6 +1,7 @@
 ### 对拍
 
 #### Linux
+
 ```cpp
 #include <bits/stdc++.h>
 using namespace std;
@@ -23,6 +24,7 @@ signed main()
 ```
 
 #### windows
+
 ```cpp
 #include <bits/stdc++.h>
 using namespace std;

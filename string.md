@@ -72,6 +72,7 @@ vector<int> min_borders(const string &s) {
 ```
 
 **弱周期引理:**
+
 ```cpp
 #include <iostream>
 #include <string>
